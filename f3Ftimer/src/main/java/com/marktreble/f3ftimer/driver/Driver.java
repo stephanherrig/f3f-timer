@@ -1025,6 +1025,10 @@ public class Driver implements TTS.onInitListenerProxy {
 		if (mSetFullVolume) {
 			AudioManager audioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
 			audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 20, 0);
+			// TODO preferences for left and right volume
+			for ( int i = 0; i < soundArray.length; i++) {
+				soundPool.setVolume(soundArray[i], 1.0f, 1.0f);
+			}
 		}
 	}
 

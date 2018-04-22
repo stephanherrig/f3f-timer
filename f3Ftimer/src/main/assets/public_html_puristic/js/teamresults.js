@@ -23,7 +23,7 @@ function render_teamresults(){
 		return;
 	}
 
-	// get final score
+	// get final score (sorted by points)
 	var sub_totals_final_teamresults = subTotals(last_complete_round);
 
 	// get teams
@@ -39,14 +39,16 @@ function render_teamresults(){
         return;
     }
 
-    // calc team score
-    for (team_index = 0; team_index<sub_totals_final_teams.length; team_index++){
+    // calc team score for the best 3 pilots per team
+    for (team_index = 0; team_index<sub_totals_final_teams.length; team_index++) {
         var team_points = 0.0;
         var count = 0;
-        for (pilot_index = 0; pilot_index<sub_totals_final_teamresults.length; pilot_index++){
-            if (count < 3 && sub_totals_final_teamresults[pilot_index].team == sub_totals_final_teams[team_index]) {
-                team_points += sub_totals_final_teamresults[pilot_index].total;
-                count++;
+        for (pilot_index = 0; pilot_index<sub_totals_final_teamresults.length; pilot_index++) {
+            if (sub_totals_final_teamresults[pilot_index].team == sub_totals_final_teams[team_index]) {
+                if (count < 3) {
+                    team_points += sub_totals_final_teamresults[pilot_index].total;
+                    count++;
+                }
             }
         }
         sub_totals_final_teams[team_index] = {team:sub_totals_final_teams[team_index], points:team_points, percent:0.0};
@@ -94,15 +96,19 @@ function render_teamresults(){
 		cols2.push("%");
 		rows2.push(cols2);
 
-		for (pilot_index = 0; pilot_index<sub_totals_final_teamresults.length; pilot_index++){
+        var count = 0;
+		for (pilot_index = 0; pilot_index<sub_totals_final_teamresults.length; pilot_index++) {
 			if (sub_totals_final_teamresults[pilot_index].team == sub_totals_final_teams[team_index].team) {
-				cols3 = [];
-				cols3.push(sub_totals_final_teamresults[pilot_index].rank);
-				cols3.push(sub_totals_final_teamresults[pilot_index].pilot_id);
-				cols3.push(sub_totals_final_teamresults[pilot_index].pilot_name);
-				cols3.push(sub_totals_final_teamresults[pilot_index].total.toFixed(2));
-				cols3.push(sub_totals_final_teamresults[pilot_index].percent.toFixed(2));
-				rows2.push(cols3);
+                if (count < 3) {
+                    cols3 = [];
+                    cols3.push(sub_totals_final_teamresults[pilot_index].rank);
+                    cols3.push(sub_totals_final_teamresults[pilot_index].pilot_id);
+                    cols3.push(sub_totals_final_teamresults[pilot_index].pilot_name);
+                    cols3.push(sub_totals_final_teamresults[pilot_index].total.toFixed(2));
+                    cols3.push(sub_totals_final_teamresults[pilot_index].percent.toFixed(2));
+                    rows2.push(cols3);
+                    count++;
+                }
 			}
 		}
 		table1 = createTableTeamResults(rows2, 2);

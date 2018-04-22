@@ -37,7 +37,7 @@ public class RaceResultsService extends Service {
 	
 	static boolean DEBUG = true;
 	static SimpleDateFormat HTTP_HEADER_DATE_FORMAT = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
-	
+
 	ServerSocket mServerSocket;
 	Listener mListener;
 	Integer mRid;
@@ -120,6 +120,7 @@ public class RaceResultsService extends Service {
     	mListener = null;
     	try {
     	    mServerSocket = new ServerSocket(8080, 3);
+    	    mServerSocket.setReuseAddress(true);
     	} 
     	catch (IOException e) {
 
@@ -205,6 +206,7 @@ public class RaceResultsService extends Service {
 						}
 					}
 					input.close();
+					clientSocket.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}

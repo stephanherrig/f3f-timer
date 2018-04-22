@@ -1,7 +1,3 @@
-jQuery.event.add(window, "resize", resizeFrame);
-jQuery.event.add(window, "orientationchange", resizeFrame);
-jQuery.event.add(window, "unload", stopLoading);
-
 var scrollwindow = null;
 var timer;
 var frame_rate = 30; // seconds
@@ -13,15 +9,21 @@ modelLive.state = 0;
 model.time = 0;
 var xhr;
 var lastTime = 0;
-var lastView = null;
+var lastView;
+var oldview;
+var curr_view;
+
+jQuery.event.add(window, "resize", resizeFrame);
+jQuery.event.add(window, "orientationchange", resizeFrame);
+jQuery.event.add(window, "unload", stopLoading);
 
 $(document).bind("keydown keypress", function(e){
-	if( (e.keyCode == 37 && e.altKey == true) || e.which == 8 ) { // 8 == backspace
+	if( (e.keyCode === 37 && e.altKey === true) || e.which === 8 ) { // 8 == backspace
 		lastView = viewStack[viewStack.length-1];
 		popView();
 		e.preventDefault();
 	}
-	if (e.keyCode == 39 && e.altKey == true) {
+	if (e.keyCode === 39 && e.altKey === true) {
 	    pushView(lastView);
 	    e.preventDefault();
 	}
@@ -33,7 +35,7 @@ $(document).ready(function(){
 });
 
 function stopLoading(){
-	if(xhr && xhr.readystate != 4){
+	if(xhr && xhr.readystate !== 4){
         xhr.abort();
     }
 	clearTimeout(timer);
@@ -47,8 +49,8 @@ function getUpdate(){
 	stopLoading();
 
     var requesturl;
-    if (typeof curr_view !== 'undefined' && curr_view.className == 'liveinfo list') {
-        requesturl = "api/getRaceLiveData.jsp?last_request="+lastTime.toString()
+    if (curr_view !== undefined && curr_view.className === 'liveinfo list') {
+        requesturl = "api/getRaceLiveData.jsp?last_request="+lastTime.toString();
     } else {
         requesturl = "api/getRaceData.jsp?last_request="+lastTime.toString();
     }
@@ -74,21 +76,21 @@ function xhrOnError(xhr, textStatus, errorThrown) {
 
 function requestResponseFn(response){
     try {
-        data = JSON.parse(xhr.responseText)[0];
+        var data = JSON.parse(xhr.responseText)[0];
 
-		if (typeof model.time !== 'undefined' && typeof modelLive.time !== 'undefined' && modelLive.time <= model.time) {
+		if (model.time !== undefined && modelLive.time !== undefined && modelLive.time <= model.time) {
 			lastTime = model.time;
-		} else if (typeof modelLive.time !== 'undefined') {
+		} else if (modelLive.time !== undefined) {
 			lastTime = modelLive.time;
-		} else if (typeof model.time !== 'undefined') {
+		} else if (model.time !== undefined) {
 			lastTime = model.time;
 		}
 
-		if (lastTime == 0){
+		if (lastTime === 0){
 			modelLive = data;
 			firstCall(data);
 		} else {
-			if (typeof curr_view !== 'undefined' && curr_view.className == 'liveinfo list') {
+			if (curr_view !== undefined && curr_view.className === 'liveinfo list') {
 				modelLive = data;
 			} else {
 				model = data;
@@ -112,23 +114,25 @@ function resizeFrame(){
 
 function render(){
 	clearTimeout(timer);
-	if (viewStack.length<1) return;
+	if (viewStack.length<1) {
+	    return;
+	}
 	curr_view = viewStack[viewStack.length-1];
-	classes = $(curr_view).attr('class').split(' ');
-	cls = classes[0];
+	var classes = $(curr_view).attr('class').split(' ');
+	var cls = classes[0];
 	eval("render_"+cls+"()");
-	if (scrollwindow != null) {
+	if (scrollwindow !== null) {
         scrollwindow.refresh();
     } else {
         scrollwindow = new IScroll(curr_view, { zoom: true, mouseWheel: true, click: false, tap: false});
     }
-	if (curr_view.className == 'liveinfo list') {
+	if (curr_view.className === 'liveinfo list') {
 	    frame_rate = 1;
     } else {
 	    frame_rate = 30;
     }
     rearmTimer();
-	if (curr_view.className == 'home list') {
+	if (curr_view.className === 'home list') {
 	    clearTimeout(timer);
 	}
 }
@@ -138,7 +142,9 @@ function pushView(view, context){
 
 	$('#view-stack').append(view);
 	$('#view-stack').stop().animate({'height':1}, 100, "swing", function(){
-		if (viewStack.length<2) return;
+		if (viewStack.length<2) {
+		    return;
+		}
 		oldview = viewStack[viewStack.length-2];
 		$(oldview).addClass('out').scrollTop(0);
 	});
@@ -146,28 +152,33 @@ function pushView(view, context){
 	viewStack.push(view);
 
 	if (viewStack.length>1){
-		if (!$('#top').hasClass('back'))
+		if (!$('#top').hasClass('back')) {
 			$('#top').addClass('back');
-
+        }
 		indexPath.push($(context).index());
 	}
 	getUpdate();
 }
 
 function popView(){
-	if (viewStack.length == 1) return;
+	if (viewStack.length === 1) {
+	    return;
+	}
 	$('#window').scrollTop(0);
 	scrollwindow = null;
 	lastView = viewStack.pop();
 	indexPath.pop();
-	oldview = curr_view = viewStack[viewStack.length-1];
+	curr_view = viewStack[viewStack.length-1];
+	oldview = curr_view;
 	$(oldview).removeClass('out');
 
 	$('#view-stack').stop().animate({'height':0}, 100 , "swing", function(){
 		$(lastView).remove();
 	});
 
-	if (viewStack.length==1 && $('#top').hasClass('back')) $('#top').removeClass('back');
+	if (viewStack.length === 1 && $('#top').hasClass('back')) {
+	    $('#top').removeClass('back');
+	}
 	resizeFrame();
 }
 
@@ -184,9 +195,9 @@ function responsive_name(str){
 function round2Fixed(value, places) {
     value = +value;
 
-	if (isNaN(value))
+	if (Number.isNaN(value)) {
 	    return NaN;
-
+    }
     var multiplier = Math.pow(10, places);
 	return (Math.round(value * multiplier) / multiplier);
 }
@@ -199,7 +210,9 @@ function createListItem(label, callback){
 	var li = document.createElement('div');
 	$(li).addClass('list-item');
 	$(li).html('<span>'+label+'</span>');
-	if (callback) $(li).bind('click', callback);
+	if (callback) {
+	    $(li).bind('click', callback);
+	}
 	return li;
 }
 
@@ -207,7 +220,9 @@ function createListItemLink(label, callback){
 	var li = document.createElement('div');
 	$(li).addClass('list-item-link');
 	$(li).html('<span>'+label+'</span>');
-	if (callback) $(li).bind('click', callback);
+	if (callback) {
+	    $(li).bind('click', callback);
+	}
 	return li;
 }
 
