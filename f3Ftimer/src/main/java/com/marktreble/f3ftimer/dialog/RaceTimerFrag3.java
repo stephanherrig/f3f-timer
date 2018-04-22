@@ -132,6 +132,7 @@ public class RaceTimerFrag3 extends RaceTimerFrag {
 				a.sendBroadcast(i);
 			}
 			
+			if (s==5 && s != mLastSecond) a.sendCommand("25");
 			if (s==10 && s != mLastSecond) a.sendCommand("20");
 			if (s==15 && s != mLastSecond) a.sendCommand("15");
 			if (s==20 && s != mLastSecond) a.sendCommand("10");
