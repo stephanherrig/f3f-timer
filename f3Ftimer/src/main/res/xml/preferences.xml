@@ -4,13 +4,23 @@
         android:key="button_connection_settings"
         android:title="@string/connection_settings"
         android:persistent="false">
+
         <ListPreference
-            android:key="pref_input_src"
-            android:title="Input Source"
+            android:defaultValue="@string/Demo"
             android:entries="@array/InputSources"
             android:entryValues="@array/InputSources"
-            android:defaultValue="@string/Demo"/>
+            android:key="pref_input_src"
+            android:title="Input Source"/>
 
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="pref_find_peer_ip_switch"
+            android:title="Find peer hosts IPs"/>
+        <EditTextPreference
+            android:defaultValue="Default value"
+            android:key="pref_find_peer_ip_text"
+            android:selectAllOnFocus="true"
+            android:singleLine="false"/>
         <EditTextPreference
             android:key="pref_input_tcpio_ip"
             android:title="@string/input_tcpio_ip"

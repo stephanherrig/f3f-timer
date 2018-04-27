@@ -12,6 +12,7 @@ import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
+import android.preference.SwitchPreference;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -24,6 +25,9 @@ import com.marktreble.f3ftimer.languages.Languages;
 import com.marktreble.f3ftimer.media.TTS;
 import com.marktreble.f3ftimer.wifi.Wifi;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -113,6 +117,43 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
 
     public void onError(String utteranceId){ }
 
+    public void findPeerIp() {
+        try {
+            SwitchPreference pref_find_peer_switch = (SwitchPreference) findPreference("pref_find_peer_ip_switch");
+            if (pref_find_peer_switch.isChecked()) {
+                Preference pref_find_peer_ip = findPreference("pref_find_peer_ip_text");
+                java.lang.Process proc = Runtime.getRuntime().exec("ip neighbor");
+                String line = null;
+                String text = "";
+    
+                InputStream stderr = proc.getErrorStream();
+                InputStreamReader esr = new InputStreamReader(stderr);
+                BufferedReader ebr = new BufferedReader(esr);
+                while ((line = ebr.readLine()) != null) {
+                    if (!text.equals("")) {
+                        text += "\n";
+                    }
+                    text += line.substring(0, line.indexOf(" lladdr"));
+                }
+    
+                InputStream stdout = proc.getInputStream();
+                InputStreamReader osr = new InputStreamReader(stdout);
+                BufferedReader obr = new BufferedReader(osr);
+                while ((line = obr.readLine()) != null) {
+                    if (!text.equals("")) {
+                        text += "\n";
+                    }
+                    text += line.substring(0, line.indexOf(" lladdr"));
+                }
+    
+                pref_find_peer_ip.setSummary(text);
+                pref_find_peer_switch.setChecked(false);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
     	Intent i;
 
@@ -144,6 +185,10 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
 
         // Callbacks to input driver
     
+        if (key.equals("pref_find_peer_ip_switch")) {
+            findPeerIp();
+        }
+        
         if (key.equals("pref_wifi_hotspot")) {
             boolean wifi_hotspot = sharedPreferences.getBoolean(key, false);
             Preference pref_results_server = findPreference("pref_results_server");
@@ -259,6 +304,9 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
 	        findPreference("pref_usb_parity").setEnabled(false);
 
             findPreference("pref_input_src_device").setEnabled(true);
+    
+            findPreference("pref_find_peer_ip_switch").setEnabled(false);
+            findPreference("pref_find_peer_ip_text").setEnabled(false);
         } else if (inputSource.equals(getString(R.string.Demo))) {
             // Demo mode - hide all options
             findPreference("pref_input_tcpio_ip").setEnabled(false);
@@ -268,12 +316,19 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
             findPreference("pref_usb_parity").setEnabled(false);
 
             findPreference("pref_input_src_device").setEnabled(false);
+    
+            findPreference("pref_find_peer_ip_switch").setEnabled(false);;
+            findPreference("pref_find_peer_ip_text").setEnabled(false);;
         } else {
             // USB - Hide device picker, show baud rate etc..
             if (inputSource.equals(getString(R.string.TCP_IO))) {
                 findPreference("pref_input_tcpio_ip").setEnabled(true);
+                findPreference("pref_find_peer_ip_switch").setEnabled(true);
+                findPreference("pref_find_peer_ip_text").setEnabled(true);
             } else {
                 findPreference("pref_input_tcpio_ip").setEnabled(false);
+                findPreference("pref_find_peer_ip_switch").setEnabled(false);
+                findPreference("pref_find_peer_ip_text").setEnabled(false);
             }
 
             findPreference("pref_usb_baudrate").setEnabled(true);
