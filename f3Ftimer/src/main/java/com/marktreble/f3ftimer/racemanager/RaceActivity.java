@@ -600,6 +600,7 @@ public class RaceActivity extends ListActivity {
 					showNextRound();
 				}
 			}
+			
 			if (requestCode == RaceActivity.DLG_TIME_SET){
 				// Response from setting the time manually
 				String time = data.getStringExtra("time");
@@ -616,6 +617,7 @@ public class RaceActivity extends ListActivity {
                 }
 
 			}
+			
 			if (requestCode == RaceActivity.DLG_TIMEOUT){
 				// Send command to Service to say that timeout has been resumed
 				sendCommand("timeout_resumed");
@@ -1294,6 +1296,24 @@ public class RaceActivity extends ListActivity {
                 if (data == null){
 					return;
 				}
+
+                if (data.equals("score_zero_and_cancel")){
+                    Integer pilot_id = extras.getInt("com.marktreble.f3ftimer.pilot_id");
+                    RacePilotData datasource = new RacePilotData(RaceActivity.this);
+                    datasource.open();
+                    Pilot p = datasource.getPilot(pilot_id, mRid);
+                    datasource.close();
+                    scorePilotZero(p);
+                    if (mNextPilot != null) {
+                        // Scroll to next pilot
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                mListView.smoothScrollToPositionFromTop(mNextPilot.position - 1, 0, 500);
+                                }
+                        }, 100);
+                    }
+                }
 
 				if (data.equals("start_pressed")){
 					if (!mPilotDialogShown){

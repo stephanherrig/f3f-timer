@@ -277,7 +277,6 @@ public class Driver implements TTS.onInitListenerProxy {
                 }
 
 				if (data.equals("abort")){
-					mSentFinaliseIndication = true; /* prevent that a pending delayed automatic progression handler sends a broadcast */
 					cancelWorkingTime();
 					((DriverInterface)mContext).sendAbort();
 					return;
@@ -499,6 +498,7 @@ public class Driver implements TTS.onInitListenerProxy {
 	}
 
 	public void cancelWorkingTime(){
+		mSentFinaliseIndication = true; /* prevent that a pending delayed automatic progression handler sends a broadcast */
 		if (mSpeechFXon) {
 			mHandler.removeCallbacks(announceWorkingTime);
 		}

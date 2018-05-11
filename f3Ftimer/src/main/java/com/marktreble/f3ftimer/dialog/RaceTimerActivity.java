@@ -437,9 +437,6 @@ public class RaceTimerActivity extends FragmentActivity {
 				}
 				
 				if (data.equals("score_zero_and_cancel")){
-					Integer pilot_id = extras.getInt("com.marktreble.f3ftimer.pilot_id");
-					scorePilotZero(pilot_id);
-                    mActivity.setResult(RaceActivity.RESULT_OK);
 					finish();
 				}
 				
