@@ -261,7 +261,12 @@ public class RaceResultsService extends Service {
     	        header = "HTTP/1.1 200 OK\n";
     	        header+= "Content-Type: "+mime_type+"\n";
     	        header+= "Content-Length: "+len+"\n";
-    	        header+= "\r\n";
+				String now = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis())).replaceFirst("\\x2B\\d\\d:\\d\\d","");
+				header+= "Date: "+now+"\n";
+				String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+2000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
+				header+= "Expires: "+expiredate+"\n";
+				header+= "Cache-Control: max-age=60\n";
+				header+= "\r\n";
 
     	        byte[] headerBytes = header.getBytes();
     	        response = new byte[headerBytes.length + contentBytes.length];
@@ -386,6 +391,10 @@ public class RaceResultsService extends Service {
 		private String getMimeTypeForExtension(String ext){
 			String type = "text/plain";
 			
+			if (ext.equals("")){
+				type = "text/html; charset=utf-8";
+			}
+			
 			if (ext.equals("html")){
 				type = "text/html; charset=utf-8";
 			}
@@ -396,6 +405,10 @@ public class RaceResultsService extends Service {
 
 			if (ext.equals("js")){
 				type = "text/javascript";
+			}
+
+			if (ext.equals("jsp")){
+				type = "application/javascript";
 			}
 
 			if (ext.equals("png")){

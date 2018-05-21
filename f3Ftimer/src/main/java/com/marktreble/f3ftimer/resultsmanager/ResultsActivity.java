@@ -5,13 +5,11 @@
  */
 package com.marktreble.f3ftimer.resultsmanager;
 
-import java.util.ArrayList;
-
-import android.content.Context;
-import android.os.Bundle;
 import android.app.ListActivity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
+import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -19,12 +17,16 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
-import com.marktreble.f3ftimer.data.race.*;
+
 import com.marktreble.f3ftimer.R;
+import com.marktreble.f3ftimer.data.race.Race;
+import com.marktreble.f3ftimer.data.race.RaceData;
 import com.marktreble.f3ftimer.dialog.AboutActivity;
 import com.marktreble.f3ftimer.dialog.HelpActivity;
 import com.marktreble.f3ftimer.pilotmanager.PilotsActivity;
 import com.marktreble.f3ftimer.racemanager.RaceListActivity;
+
+import java.util.ArrayList;
 
 public class ResultsActivity extends ListActivity {
 
@@ -57,13 +59,6 @@ public class ResultsActivity extends ListActivity {
         setListAdapter(mArrAdapter);        
 	}
 	
-	public void onBackPressed(){
-		Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-	    homeIntent.addCategory( Intent.CATEGORY_HOME );
-	    homeIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);  
-	    startActivity(homeIntent); 
-	}
-
 	@Override
 	public void onResume(){
         super.onResume();

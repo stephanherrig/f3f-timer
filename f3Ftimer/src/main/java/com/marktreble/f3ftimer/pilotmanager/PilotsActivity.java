@@ -104,13 +104,6 @@ public class PilotsActivity extends ListActivity {
         setListAdapter(mArrAdapter);
 	}
 	
-	public void onBackPressed(){
-		Intent homeIntent = new Intent(Intent.ACTION_MAIN);
-	    homeIntent.addCategory( Intent.CATEGORY_HOME );
-	    homeIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);  
-	    startActivity(homeIntent); 
-	}
-	
 	@Override
 	public void onListItemClick(ListView l, View v, int position, long id) {
         Intent intent = new Intent(this, PilotsEditActivity.class);
