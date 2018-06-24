@@ -42,7 +42,10 @@ public class RaceResultsService extends Service {
 	Listener mListener;
 	Integer mRid;
 	byte[] mOut;
-	long mLastRequestTime = 0;
+	byte[] mOutLiveData;
+	byte[] mOutRaceData;
+	long mLastRequestTimeLiveData = 0;
+	long mLastRequestTimeRaceData = 0;
 	
 	private String mResultsServerStyle;
 
@@ -154,19 +157,24 @@ public class RaceResultsService extends Service {
 	    	    return null;
 	    	}
 	    	if (clientSocket!=null){
-	    		InputStream input = null;
-	            OutputStream output = null;
 				try {
+					InputStream input = clientSocket.getInputStream();
+					OutputStream output = clientSocket.getOutputStream();
+					
 					byte[] buffer = new byte[1024];
-					input = clientSocket.getInputStream();
 					input.read(buffer);
 					String[] request_headers = parseHeaders(buffer);
 
-					if (request_headers != null){
+					if (request_headers == null) {
+						output.write(get500Page("No Request Header found"));
+						output.close();
+					} else {
 						String[] req = request_headers[0].split(" ");
 					
-						if (req.length!=3){
+						if (req.length != 3){
 							Log.e("F3fHTTPServerRequest", "Malformed Request");
+							output.write(get500Page("Malformed Request \"" + request_headers[0] + "\""));
+							output.close();
 						} else {
 							String request_type = req[0];
 							String request_path = req[1];
@@ -174,9 +182,7 @@ public class RaceResultsService extends Service {
 							if (request_path.equals("/")) request_path = "/index.html"; // Default page
 
 
-							output = clientSocket.getOutputStream();
-							
-							String ext = ""; 
+							String ext = "";
 							String[] parts = request_path.split("\\?");
 							String path = parts[0];
 							String query = "";
@@ -186,16 +192,20 @@ public class RaceResultsService extends Service {
 				            if (i>0) ext = path.substring(i+1);
 							
 							if (request_path.contains("getRaceLiveData.jsp")) {
-								if (0 == mLastRequestTime || (System.currentTimeMillis() - mLastRequestTime) > 500) {
-									mLastRequestTime = System.currentTimeMillis();
-
-									mOut = getLivePage(request_type, path, ext, query);
+								if (0 == mLastRequestTimeLiveData || (System.currentTimeMillis() - mLastRequestTimeLiveData) > 500) {
+									mLastRequestTimeLiveData = System.currentTimeMillis();
+									mOutLiveData = getLivePage(request_type, path, ext, query);
+									mOut = mOutLiveData;
+								} else {
+									mOut = mOutLiveData;
 								}
 							} else if (request_path.contains("getRaceData.jsp")) {
-								if (0 == mLastRequestTime || (System.currentTimeMillis() - mLastRequestTime) > 500) {
-									mLastRequestTime = System.currentTimeMillis();
-
-									mOut = getDynamicPage(request_type, path, ext, query);
+								if (0 == mLastRequestTimeRaceData || (System.currentTimeMillis() - mLastRequestTimeRaceData) > 500) {
+									mLastRequestTimeRaceData = System.currentTimeMillis();
+									mOutRaceData = getDynamicPage(request_type, path, ext, query);
+									mOut = mOutRaceData;
+								} else {
+									mOut = mOutRaceData;
 								}
 							} else {
 								mOut = getStaticPage(path, ext);
@@ -205,6 +215,7 @@ public class RaceResultsService extends Service {
 				            output.close();
 						}
 					}
+					
 					input.close();
 					clientSocket.close();
 				} catch (IOException e) {
@@ -259,14 +270,16 @@ public class RaceResultsService extends Service {
                	
                 String header;
     	        header = "HTTP/1.1 200 OK\n";
-    	        header+= "Content-Type: "+mime_type+"\n";
-    	        header+= "Content-Length: "+len+"\n";
+    	        header += "Content-Type: "+mime_type+"\n";
+    	        header += "Content-Length: "+len+"\n";
 				String now = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis())).replaceFirst("\\x2B\\d\\d:\\d\\d","");
-				header+= "Date: "+now+"\n";
-				String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+2000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
-				header+= "Expires: "+expiredate+"\n";
-				header+= "Cache-Control: max-age=60\n";
-				header+= "\r\n";
+				header += "Date: "+now+"\n";
+				String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+30000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
+				header += "Expires: "+expiredate+"\n";
+				header += "Cache-Control: max-age=30\n";
+				header += "Cache-Control: no-cache\n";
+				header += "Cache-Control: no-store\n";
+				header += "\r\n";
 
     	        byte[] headerBytes = header.getBytes();
     	        response = new byte[headerBytes.length + contentBytes.length];
@@ -366,7 +379,7 @@ public class RaceResultsService extends Service {
             return (header + html).getBytes();
 		}
 		
-			private byte[] get500Page(){
+		private byte[] get500Page(){
 			
 			String html = "";
 	  		
@@ -386,6 +399,28 @@ public class RaceResultsService extends Service {
             header+= "\r\n";
 
             return (header + html).getBytes();
+		}
+	
+		private byte[] get500Page(String errorMsg){
+		
+			String html = "";
+		
+			html = "<!DOCTYPE html>\n";
+			html+= "<head>\n";
+			html+= "<title>HTTP/1.1 500 Internal Server Error</title>";
+			html+= "</head>\n";
+			html+= "<body>\n";
+			html+= "<h1>" + errorMsg + "</h1>";
+			html+= "</body>\n";
+			html+= "</html>\n";
+		
+			String header;
+			header = "HTTP/1.1 500 Internal Server Error\n";
+			header+= "Content-Type: text/html; charset=utf-8\n";
+			header+= "Content-Length: "+html.length()+"\n";
+			header+= "\r\n";
+		
+			return (header + html).getBytes();
 		}
 
 		private String getMimeTypeForExtension(String ext){
@@ -601,9 +636,11 @@ public class RaceResultsService extends Service {
             header += "Content-Length: "+data.length()+"\n";
             String now = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis())).replaceFirst("\\x2B\\d\\d:\\d\\d","");
             header += "Date: "+now+"\n";
-            String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+2000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
+            String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+1000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
             header += "Expires: "+expiredate+"\n";
             header += "Cache-Control: max-age=1\n";
+			header += "Cache-Control: no-cache\n";
+			header += "Cache-Control: no-store\n";
             header += "\r\n";
 
             return (header + data).getBytes();
@@ -720,14 +757,16 @@ public class RaceResultsService extends Service {
 
             String header;
             header = "HTTP/1.1 200 OK\n";
-            header+= "Content-Type: application/json; charset=utf-8\n";
-            header+= "Content-Length: "+data.length()+"\n";
+            header += "Content-Type: application/json; charset=utf-8\n";
+            header += "Content-Length: "+data.length()+"\n";
             String now = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis())).replaceFirst("\\x2B\\d\\d:\\d\\d","");
             header += "Date: "+now+"\n";
-            String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+2000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
+            String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+30000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
             header += "Expires: "+expiredate+"\n";
             header += "Cache-Control: max-age=30\n";
-            header+= "\r\n";
+			header += "Cache-Control: no-cache\n";
+			header += "Cache-Control: no-store\n";
+            header += "\r\n";
 
             return (header + data).getBytes();
 		}

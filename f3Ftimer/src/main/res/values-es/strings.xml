@@ -33,8 +33,8 @@
     <string name="retired">Ret</string>
     <string name="reflight">RF</string>
     <string name="notime">--.--</string>
-    <string name="start_working_time">Cominezo del tiempo de trabajo</string>
-    <string name="working_time_started">Inicio del tiempo de trabajo</string>
+    <string name="start_working_time">Comience del tiempo de preparación</string>
+    <string name="working_time_started">Tiempo de preparación comenzado</string>
     <string name="late_entry">Tiempo comenzado</string>
     <string name="model_launched">Avion lanzado</string>
     <string name="model_launch">Model Launch</string>

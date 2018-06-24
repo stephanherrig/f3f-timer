@@ -34,9 +34,10 @@ public class RaceTimerFrag2 extends RaceTimerFrag {
 
         if (savedInstanceState != null) {
 	    } else {
-	    	mStart = System.currentTimeMillis();
+        	/* first speak working time started, then start the timer */
+	    	mStart = System.currentTimeMillis() + 3000;
 			mLastSecond = 0;
-		    mHandler.postDelayed(updateClock, 10);
+		    mHandler.postDelayed(updateClock, 3000 + 10);
 	    }
 
         // Begin the timeout dialog timeout
@@ -103,7 +104,7 @@ public class RaceTimerFrag2 extends RaceTimerFrag {
 		public void run(){
         	long elapsed = System.currentTimeMillis() - mStart;
         	float seconds = (float)elapsed/1000;
-        	if (seconds>30) seconds = 30;
+        	if (seconds > 30) seconds = 30;
 
 			TextView cd = (TextView) mView.findViewById(R.id.time);
 			String str_time = String.format("%.2f", 30-seconds);
@@ -113,10 +114,9 @@ public class RaceTimerFrag2 extends RaceTimerFrag {
 			min.setText(str_time);
 
 			/* give .5 leadtime for speaking the numbers */
-			int s = (int) Math.floor(seconds + 0.5);
+			int s = (int) Math.floor(seconds + 0.6);
 
 			RaceTimerActivity a = (RaceTimerActivity)getActivity();
-
 			/* only send when the second changes, and not 100 times per second */
 			if (s != mLastSecond) {
 				/* send to ResultsServer Live Listener */
@@ -139,6 +139,7 @@ public class RaceTimerFrag2 extends RaceTimerFrag {
 			if (s==28 && s != mLastSecond) a.sendCommand("2");
 			if (s==29 && s != mLastSecond) a.sendCommand("1");
 			if (s==30 && s != mLastSecond){
+				a.sendCommand("0");
         		// Runout of working time
         		// -- pilot scores zero!
         		

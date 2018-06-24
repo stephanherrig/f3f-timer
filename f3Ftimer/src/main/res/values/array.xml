@@ -89,7 +89,10 @@
 
     <string-array name="options_sounds" translatable="false">
         <item>@string/whistle</item>
+        <item>@string/whistle_lastturn</item>
         <item>@string/beep</item>
+        <item>@string/buzz</item>
+        <item>@string/intercom_beep</item>
     </string-array>
 
     <string-array name="options_results_server_style">

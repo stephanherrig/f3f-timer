@@ -128,6 +128,14 @@
             android:entries="@array/options_sounds"
             android:entryValues="@array/options_sounds"
              android:defaultValue="@string/beep" />
+
+        <ListPreference
+            android:key="pref_buzz_working_time_started"
+            android:title="@string/snd_working_time_started"
+            android:dependency="pref_buzzer"
+            android:entries="@array/options_sounds"
+            android:entryValues="@array/options_sounds"
+            android:defaultValue="@string/whistle" />
     </PreferenceCategory>
 
     <PreferenceCategory

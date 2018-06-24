@@ -142,7 +142,10 @@
 
     <!-- Sounds -->
     <string name="whistle">whistle</string>
+    <string name="whistle_lastturn">whistle_lastturn</string>
     <string name="beep">beep</string>
+    <string name="buzz">buzz</string>
+    <string name="intercom_beep">intercom_beep</string>
 
     <!-- Sound Settings -->
     <string name="snd_off_course">Off Course</string>
@@ -150,6 +153,8 @@
     <string name="snd_turn">Turn</string>
     <string name="snd_turn9">Last Turn</string>
     <string name="snd_penalty">Penalty</string>
+    <string name="snd_working_time_started">Working Time Started</string>
+
     <string name="next_pilot">Next Pilot</string>
     <string name="menu_finish_race">Finish Race</string>
 

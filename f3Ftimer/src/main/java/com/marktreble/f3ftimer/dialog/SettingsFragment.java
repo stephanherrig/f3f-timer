@@ -89,6 +89,7 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
         setListSummary("pref_buzz_turn", R.array.options_sounds);
         setListSummary("pref_buzz_turn9", R.array.options_sounds);
         setListSummary("pref_buzz_penalty", R.array.options_sounds);
+        setListSummary("pref_buzz_working_time_started", R.array.options_sounds);
 
 
     	Preference pref_results_server = findPreference("pref_results_server");
@@ -228,7 +229,8 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
          || key.equals("pref_buzz_on_course")
          || key.equals("pref_buzz_turn")
          || key.equals("pref_buzz_turn9")
-         || key.equals("pref_buzz_penalty")) {
+         || key.equals("pref_buzz_penalty")
+         || key.equals("pref_buzz_working_time_started")) {
             setListSummary(key, R.array.options_sounds);
             sendStringValueToService(key, sharedPreferences.getString(key, ""));
         }

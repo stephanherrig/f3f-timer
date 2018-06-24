@@ -1,6 +1,6 @@
 var scrollwindow = null;
 var timer;
-var frame_rate = 30; // seconds
+var frame_rate = 60.0; // seconds
 var viewStack = [];
 var indexPath = [];
 var model = {};
@@ -127,9 +127,9 @@ function render(){
         scrollwindow = new IScroll(curr_view, { zoom: true, mouseWheel: true, click: false, tap: false});
     }
 	if (curr_view.className === 'liveinfo list') {
-	    frame_rate = 1;
+	    frame_rate = 0.5;
     } else {
-	    frame_rate = 30;
+	    frame_rate = 30.0;
     }
     rearmTimer();
 	if (curr_view.className === 'home list') {

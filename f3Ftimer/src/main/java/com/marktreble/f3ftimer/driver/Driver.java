@@ -41,7 +41,7 @@ public class Driver implements TTS.onInitListenerProxy {
 
 	private static final String TAG = "Driver";
 
-	private static final String[] sounds = {"pref_buzz_off_course", "pref_buzz_on_course", "pref_buzz_turn", "pref_buzz_turn9", "pref_buzz_penalty"};
+	private static final String[] sounds = {"pref_buzz_off_course", "pref_buzz_on_course", "pref_buzz_turn", "pref_buzz_turn9", "pref_buzz_penalty", "pref_buzz_working_time_started"};
 
 	private Context mContext;
     private RaceData datasource;
@@ -70,6 +70,8 @@ public class Driver implements TTS.onInitListenerProxy {
 
 	private boolean mSoundFXon;
 	private boolean mSpeechFXon;
+	private boolean mSpeechOmitOffCourseEnabled = false;
+	private boolean mSpeechLateEntryEnabled = false;
 	
 	private String mDefaultLang;
 	private String mDefaultSpeechLang;
@@ -313,7 +315,8 @@ public class Driver implements TTS.onInitListenerProxy {
 						|| data.equals("pref_buzz_off_course")
 						|| data.equals("pref_buzz_turn")
 						|| data.equals("pref_buzz_turn9")
-						|| data.equals("pref_buzz_penalty")){
+						|| data.equals("pref_buzz_penalty")
+						|| data.equals("pref_buzz_working_time_started")){
 					String value = extras.getString("com.marktreble.f3ftimer.value");
 					setSound(data, value);
 					return;
@@ -371,13 +374,13 @@ public class Driver implements TTS.onInitListenerProxy {
 					nfe.printStackTrace();
 					// Ignore it
 				}
-				if ( number >0 && !data.equals(mCalled)){
+				if ( number >= 0 && !data.equals(mCalled)){
 					_count(data);
 					mCalled = data;
 				}
 
 				if ( number<=10)
-					mOmitOffCourse = true;
+					mOmitOffCourse = mSpeechOmitOffCourseEnabled;
 
 				if ( number == 0)
 					mLateEntry = true;
@@ -493,7 +496,8 @@ public class Driver implements TTS.onInitListenerProxy {
 	public void startWorkingTime(){
 		cancelTimeout();
 		if (mSpeechFXon){
-			mHandler.postDelayed(announceWorkingTime, 1000);
+			mHandler.postDelayed(announceWorkingTime, 100);
+			mHandler.postDelayed(workingTimeStarted, 3000);
 		}
 	}
 
@@ -501,14 +505,25 @@ public class Driver implements TTS.onInitListenerProxy {
 		mSentFinaliseIndication = true; /* prevent that a pending delayed automatic progression handler sends a broadcast */
 		if (mSpeechFXon) {
 			mHandler.removeCallbacks(announceWorkingTime);
+			mHandler.removeCallbacks(workingTimeStarted);
 		}
 	}
-
+	
+	Runnable workingTimeStarted = new Runnable(){
+		@Override
+		public void run() {
+			if (mSoundFXon) {
+				setAudioVolume();
+				SoftBuzzSound.soundWorkingTimeStarted(soundPool, soundArray);
+			}
+		}
+	};
+	
 	Runnable announceWorkingTime = new Runnable(){
 		@Override
 		public void run() {
 			Resources r = Languages.useLanguage(mContext, mPilotLang);
-			String lang = r.getString(R.string.working_time_started);
+			String lang = r.getString(R.string.start_working_time);
 			Languages.useLanguage(mContext, mDefaultLang);
 			speak(lang, TextToSpeech.QUEUE_ADD);
 		}
@@ -550,7 +565,7 @@ public class Driver implements TTS.onInitListenerProxy {
 			SoftBuzzSound.soundOffCourse(soundPool, soundArray);
 		}
 
-		// Synthesized Call
+		// Synthesized Call TODO: settings
 		if (mSpeechFXon && !mOmitOffCourse){
             mHandler.postDelayed(new Runnable() {
                 public void run() {
@@ -583,13 +598,16 @@ public class Driver implements TTS.onInitListenerProxy {
                 public void run() {
 					String lang;
 					if (mLateEntry) {
-						lang = Languages.useLanguage(mContext, mPilotLang).getString(R.string.late_entry);
+						if (mSpeechLateEntryEnabled) {
+							lang = Languages.useLanguage(mContext, mPilotLang).getString(R.string.late_entry);
+							Languages.useLanguage(mContext, mDefaultLang);
+							speak(lang, TextToSpeech.QUEUE_ADD);
+						}
 					} else {
 						lang = Languages.useLanguage(mContext, mPilotLang).getString(R.string.on_course);
-
+						Languages.useLanguage(mContext, mDefaultLang);
+						speak(lang, TextToSpeech.QUEUE_ADD);
 					}
-					Languages.useLanguage(mContext, mDefaultLang);
-					speak(lang, TextToSpeech.QUEUE_ADD);
 
                 }
             }, SPEECH_DELAY_TIME);
@@ -1052,6 +1070,9 @@ public class Driver implements TTS.onInitListenerProxy {
 		public static void soundPenalty(SoundPool player, int[] ref){
 			player.play(ref[4], 1, 1, 1, 0, 1f);
 		}
-
+	
+		public static void soundWorkingTimeStarted(SoundPool player, int[] ref){
+			player.play(ref[5], 1, 1, 1, 0, 1f);
+		}
 	}
 }
