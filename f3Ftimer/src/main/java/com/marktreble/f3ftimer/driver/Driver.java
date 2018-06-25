@@ -70,8 +70,6 @@ public class Driver implements TTS.onInitListenerProxy {
 
 	private boolean mSoundFXon;
 	private boolean mSpeechFXon;
-	private boolean mSpeechOmitOffCourseEnabled = false;
-	private boolean mSpeechLateEntryEnabled = false;
 	
 	private String mDefaultLang;
 	private String mDefaultSpeechLang;
@@ -380,7 +378,7 @@ public class Driver implements TTS.onInitListenerProxy {
 				}
 
 				if ( number<=10)
-					mOmitOffCourse = mSpeechOmitOffCourseEnabled;
+					mOmitOffCourse = true;
 
 				if ( number == 0)
 					mLateEntry = true;
@@ -565,7 +563,7 @@ public class Driver implements TTS.onInitListenerProxy {
 			SoftBuzzSound.soundOffCourse(soundPool, soundArray);
 		}
 
-		// Synthesized Call TODO: settings
+		// Synthesized Call
 		if (mSpeechFXon && !mOmitOffCourse){
             mHandler.postDelayed(new Runnable() {
                 public void run() {
@@ -596,18 +594,14 @@ public class Driver implements TTS.onInitListenerProxy {
 		if (mSpeechFXon){
             mHandler.postDelayed(new Runnable() {
                 public void run() {
-					String lang;
-					if (mLateEntry) {
-						if (mSpeechLateEntryEnabled) {
-							lang = Languages.useLanguage(mContext, mPilotLang).getString(R.string.late_entry);
-							Languages.useLanguage(mContext, mDefaultLang);
-							speak(lang, TextToSpeech.QUEUE_ADD);
-						}
-					} else {
-						lang = Languages.useLanguage(mContext, mPilotLang).getString(R.string.on_course);
-						Languages.useLanguage(mContext, mDefaultLang);
-						speak(lang, TextToSpeech.QUEUE_ADD);
-					}
+				String lang;
+				if (mLateEntry) {
+					lang = Languages.useLanguage(mContext, mPilotLang).getString(R.string.late_entry);
+				} else {
+					lang = Languages.useLanguage(mContext, mPilotLang).getString(R.string.on_course);
+				}
+				Languages.useLanguage(mContext, mDefaultLang);
+				speak(lang, TextToSpeech.QUEUE_ADD);
 
                 }
             }, SPEECH_DELAY_TIME);
