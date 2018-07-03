@@ -2,8 +2,8 @@ apply plugin: 'android-library'
 apply plugin: 'maven'
 apply plugin: 'signing'
 android {
-    compileSdkVersion 26
-    buildToolsVersion '26.0.3'
+    compileSdkVersion 27
+    buildToolsVersion '27.0.3'
     defaultConfig {
         minSdkVersion 12
         targetSdkVersion 12

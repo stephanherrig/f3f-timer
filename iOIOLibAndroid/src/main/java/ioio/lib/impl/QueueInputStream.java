@@ -28,19 +28,19 @@
  */
 package ioio.lib.impl;
 
-import ioio.lib.spi.Log;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
+import ioio.lib.spi.Log;
+
 class QueueInputStream extends InputStream {
 	private enum State {
 		OPEN, CLOSED, KILLED
-	};
-
-	private final Queue<Byte> queue_ = new ArrayBlockingQueue<Byte>(
+	}
+    
+    private final Queue<Byte> queue_ = new ArrayBlockingQueue<Byte>(
 			Constants.BUFFER_SIZE);
 	private State state_ = State.OPEN;
 

@@ -53,6 +53,12 @@ public class RaceTimerFrag2 extends RaceTimerFrag {
 	}
 	
 	@Override
+	public void onDetach(){
+		super.onDetach();
+		mHandler.removeCallbacks(updateClock);
+	}
+
+	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment

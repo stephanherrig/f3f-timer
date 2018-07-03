@@ -28,7 +28,7 @@ public class F3FtimerApplication extends Application {
             if (realCallback != null) {
                 realCallback.handleMessage(msg);
             }
-        };
+        }
     };
     public Handler getHandler() {
         return handler;

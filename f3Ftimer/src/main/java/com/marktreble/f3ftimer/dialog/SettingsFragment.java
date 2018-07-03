@@ -319,8 +319,8 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
 
             findPreference("pref_input_src_device").setEnabled(false);
     
-            findPreference("pref_find_peer_ip_switch").setEnabled(false);;
-            findPreference("pref_find_peer_ip_text").setEnabled(false);;
+            findPreference("pref_find_peer_ip_switch").setEnabled(false);
+            findPreference("pref_find_peer_ip_text").setEnabled(false);
         } else {
             // USB - Hide device picker, show baud rate etc..
             if (inputSource.equals(getString(R.string.TCP_IO))) {

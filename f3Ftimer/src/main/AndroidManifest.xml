@@ -27,7 +27,7 @@
             android:name=".racemanager.RaceListActivity"
             android:label="@string/app_race" 
             android:windowSoftInputMode="stateAlwaysHidden|adjustResize"
-            android:theme="@style/AppTheme" 
+            android:theme="@style/AppTheme"
             android:launchMode="singleTask"
             android:clearTaskOnLaunch="true">
             <intent-filter>
@@ -118,7 +118,7 @@
             android:name=".resultsmanager.ResultsActivity"
             android:label="@string/app_results" 
             android:windowSoftInputMode="stateAlwaysHidden|adjustResize"
-            android:theme="@style/AppTheme" 
+            android:theme="@style/AppTheme"
             android:launchMode="singleTask"
             android:clearTaskOnLaunch="true">
             <intent-filter>
@@ -169,7 +169,7 @@
             android:name=".pilotmanager.PilotsActivity"
             android:label="@string/app_pilots"
             android:theme="@style/AppTheme"
-            android:launchMode="singleTask" 
+            android:launchMode="singleTask"
             android:clearTaskOnLaunch="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

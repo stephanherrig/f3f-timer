@@ -4,17 +4,17 @@
  */
 package com.marktreble.f3ftimer.dialog;
 
-import com.marktreble.f3ftimer.R;
-import com.marktreble.f3ftimer.racemanager.RaceActivity;
-
+import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
-import android.os.Bundle;
-import android.os.Handler;
+
+import com.marktreble.f3ftimer.R;
+import com.marktreble.f3ftimer.racemanager.RaceActivity;
 
 public class RaceRoundTimeoutFrag extends Fragment {
 
@@ -37,6 +37,12 @@ public class RaceRoundTimeoutFrag extends Fragment {
 	@Override
 	public void onDestroy(){
 		super.onDestroy();
+		mHandler.removeCallbacks(updateClock);
+	}
+	
+	@Override
+	public void onDetach(){
+		super.onDetach();
 		mHandler.removeCallbacks(updateClock);
 	}
 

@@ -44,6 +44,12 @@ public class RaceTimerFrag3 extends RaceTimerFrag {
 		super.onDestroy();
 		mHandler.removeCallbacks(updateClock);
 	}
+	
+	@Override
+	public void onDetach(){
+		super.onDetach();
+		mHandler.removeCallbacks(updateClock);
+	}
 
 	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
