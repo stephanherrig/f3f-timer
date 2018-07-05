@@ -127,7 +127,9 @@ public class RaceRoundTimeoutActivity extends FragmentActivity {
 				}
 
 				if (data.equals("start_pressed")){
-					((RaceRoundTimeoutCompleteFrag)mCurrentFragment).startPressed();
+					if (mCurrentFragment instanceof RaceRoundTimeoutCompleteFrag) {
+						((RaceRoundTimeoutCompleteFrag) mCurrentFragment).startPressed();
+					}
 				}
 			}
 		}

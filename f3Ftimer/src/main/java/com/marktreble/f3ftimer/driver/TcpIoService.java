@@ -239,19 +239,6 @@ public class TcpIoService extends Service implements DriverInterface {
 
 		@SuppressLint("HandlerLeak")
 		private SendThread() {
-			handler = new Handler() {
-				public void handleMessage(Message msg) {
-					try {
-						String cmd = ((String)msg.obj);
-						if (cmd.length() > 0)
-							Log.i(TAG, "send Cmd \"" + cmd + "\" (" + cmd.length() + ")");
-						mmOutStream.write(cmd.getBytes(), 0, cmd.length());
-						mmOutStream.flush();
-					} catch (Throwable e) {
-						handleSocketThrowable(e);
-					}
-				}
-			};
 		}
 
 		public void destroy() {
@@ -274,6 +261,19 @@ public class TcpIoService extends Service implements DriverInterface {
 			setName("SendThread" + this.getId());
 			Looper.prepare();
 			myLooper = Looper.myLooper();
+			handler = new Handler(myLooper) {
+				public void handleMessage(Message msg) {
+					try {
+						String cmd = ((String)msg.obj);
+						if (cmd.length() > 0)
+							Log.i(TAG, "send Cmd \"" + cmd + "\" (" + cmd.length() + ")");
+						mmOutStream.write(cmd.getBytes(), 0, cmd.length());
+						mmOutStream.flush();
+					} catch (Throwable e) {
+						handleSocketThrowable(e);
+					}
+				}
+			};
 			Looper.loop();
 		}
 	}
@@ -379,6 +379,7 @@ public class TcpIoService extends Service implements DriverInterface {
 						mmSocket.setTcpNoDelay(true);
 						mmSocket.setSoLinger(false, 0);
 						mmSocket.setSoTimeout(1000);
+						//mmSocket.setKeepAlive(true);
 						mmSocket.connect(rpiSocketAdr, 5000);
 						// Do work to manage the connection (in a separate thread)
 						Log.d(TAG, "GET IO STREAMS");
