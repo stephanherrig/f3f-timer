@@ -225,12 +225,15 @@ public class BaseImport extends Activity {
     }
 
     protected void importRaceCSV(String data) {
-        // TODO
+        //TODO
         // Should use openCSV for parsing, and is not currently compliant with the database structure
-        /*
+//        CSVParser csvParser = new CSVParserBuilder().withSeparator(';').withIgnoreQuotations(true).build();
+//        csvParser.parseLine(lines[2]);
+
         Log.i("IMPORT", "CSV RACE DATA: "+ data);
         try {
             String[] lines = data.split("\r\n|\n");
+    
             RaceData datasource1 = new RaceData(mContext);
             datasource1.open();
 
@@ -271,6 +274,10 @@ public class BaseImport extends Activity {
                         p.time = Float.parseFloat(values[j + 2].trim());
                         p.penalty = Integer.parseInt(values[j + 3].trim());
                         p.points = Float.parseFloat(values[j + 4].trim());
+                    } else {
+                        p.time = Float.NaN;
+                        p.points = Float.NaN;
+                        p.penalty = 0;
                     }
                     datasource2.importPilot(p, race_id);
                 }
@@ -282,7 +289,6 @@ public class BaseImport extends Activity {
         } catch (Exception e){
             e.printStackTrace();
         }
-        */
     }
 
     protected void importPilotsCSV(String data){
