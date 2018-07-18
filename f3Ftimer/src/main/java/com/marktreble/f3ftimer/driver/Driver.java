@@ -46,6 +46,8 @@ public class Driver implements TTS.onInitListenerProxy {
 	private Context mContext;
     private RaceData datasource;
 	
+	public static int LEGS_PER_FLIGHT = 8;
+	
 	public Integer mPid;
 	public Integer mRid;
     public Integer mRnd;
@@ -53,13 +55,13 @@ public class Driver implements TTS.onInitListenerProxy {
 	public Float mPilot_Time = .0f;
 	public long mTimeOnCourse;
 	public long mLastLegTime;
-	public long[] mLegTimes = new long[10];
+	public long[] mLegTimes = new long[LEGS_PER_FLIGHT];
     public Integer mLeg = 0;
     public boolean mWindLegal = true;
-
+	
 	private boolean mAudibleWindWarning = false;
 
-    private long mFastestLegTime[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    private long mFastestLegTime[] = new long[LEGS_PER_FLIGHT];
     private float mFastestFlightTime = 0.0f;
     private String mFastestFlightPilot = "";
 
@@ -629,7 +631,7 @@ public class Driver implements TTS.onInitListenerProxy {
 		long mean = (now-mTimeOnCourse)/mLeg;
 			
 		// Estimate is current time + (mean*laps remaining)
-		long estimate = (now-mTimeOnCourse) + (mean * (10-mLeg)); 
+		long estimate = (now-mTimeOnCourse) + (mean * (LEGS_PER_FLIGHT - mLeg));
 			
 		Intent i = new Intent("com.marktreble.f3ftimer.onUpdate");
 		i.putExtra("com.marktreble.f3ftimer.service_callback", "leg_complete");
@@ -649,7 +651,7 @@ public class Driver implements TTS.onInitListenerProxy {
 		//if (mSoundFXon) mPlayer.start();
 		if (mSoundFXon){
 			setAudioVolume();
-			if (mLeg<9) {
+			if (mLeg<(LEGS_PER_FLIGHT-1)) {
 				SoftBuzzSound.soundTurn(soundPool, soundArray);
 			} else {
 				SoftBuzzSound.soundTurn9(soundPool, soundArray);
@@ -657,8 +659,8 @@ public class Driver implements TTS.onInitListenerProxy {
 		}
 
 		// Synthesized Call
-		if (mSpeechFXon && mLeg<10 && mLeg>0){
-			final String leg = Integer.toString(mLeg) + ((mLeg == 9)? " " + Languages.useLanguage(mContext, mPilotLang).getString(R.string.and_last):"");
+		if (mSpeechFXon && mLeg<LEGS_PER_FLIGHT && mLeg>0){
+			final String leg = Integer.toString(mLeg) + ((mLeg == (LEGS_PER_FLIGHT-1))? " " + Languages.useLanguage(mContext, mPilotLang).getString(R.string.and_last):"");
 
 			mHandler.postDelayed(new Runnable() {
 				public void run() {

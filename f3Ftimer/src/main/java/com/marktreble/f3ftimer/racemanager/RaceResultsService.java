@@ -568,9 +568,6 @@ public class RaceResultsService extends Service {
             if (intent.hasExtra("com.marktreble.f3ftimer.value.penalty")) {
                 penalty = intent.getExtras().getInt("com.marktreble.f3ftimer.value.penalty");
             }
-            if (turnNumber == 10) {
-                turnNumber++;
-            }
             if (intent.hasExtra("com.marktreble.f3ftimer.value.state")) {
                 state = intent.getExtras().getInt("com.marktreble.f3ftimer.value.state");
                 if (state == 1) {
@@ -585,6 +582,9 @@ public class RaceResultsService extends Service {
                     fastestFlightPilot ="";
                     penalty = 0;
                 }
+				if (state == 6) {
+					turnNumber++;
+				}
             }
         }
     };

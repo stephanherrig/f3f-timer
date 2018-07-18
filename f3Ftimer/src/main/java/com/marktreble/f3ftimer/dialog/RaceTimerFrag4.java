@@ -16,6 +16,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.marktreble.f3ftimer.R;
+import com.marktreble.f3ftimer.driver.Driver;
 import com.marktreble.f3ftimer.racemanager.RaceActivity;
 
 public class RaceTimerFrag4 extends RaceTimerFrag {
@@ -201,7 +202,7 @@ public class RaceTimerFrag4 extends RaceTimerFrag {
 		RaceTimerActivity a = (RaceTimerActivity)getActivity();
 
 		// Stop the clock here
-		if (number == 10 && mFinalTime<0){
+		if (number == Driver.LEGS_PER_FLIGHT && mFinalTime<0){
             long elapsed = System.currentTimeMillis() - mStart;
             mHandler.removeCallbacks(updateClock);
             TextView cd = (TextView) mView.findViewById(R.id.time);

@@ -42,6 +42,7 @@ public class TcpIoService extends Service implements DriverInterface {
 	private static final String FT_PENALTY = "P";
 	private static final String FT_WIND = "W";
 	private static final String FT_TIME = "T";
+	private static final String FT_LEGS = "L";
 	private static final String FT_SPEECH = "X";
 
 	private static final String ICN_CONN = "on_rasp";
@@ -406,7 +407,10 @@ public class TcpIoService extends Service implements DriverInterface {
 						}
 						sendThread = new SendThread();
 						sendThread.start();
-
+						
+						// send leg count to fly per flight
+						sendThread.sendCmd(FT_LEGS + Driver.LEGS_PER_FLIGHT + " ");
+						
 						mConnected = true;
 						driverConnected();
 
