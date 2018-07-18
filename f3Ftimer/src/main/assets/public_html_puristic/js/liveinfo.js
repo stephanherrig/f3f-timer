@@ -83,18 +83,16 @@ function render_liveinfo(){
             cols7.push("Overall");
             var n = modelLive.current_split_times.split("#").reduce(function(a, b) { return parseFloat(a) + parseFloat(b); }, 0).toFixed(2);
             cols8.push(n);
-			if (cols7.length >= 12) {
+            if (modelLive.state >= 6) {
 			    cols9.push(modelLive.fastest_time);
-			    var n = (modelLive.current_flight_time - modelLive.fastest_time).toFixed(2);
-			    cols10.push((n>0?'+':'') + n);
-                cols9[0] = "Fastest (" + modelLive.fastest_time_pilot.trim() + "):";
+			    n = (modelLive.current_flight_time - modelLive.fastest_time).toFixed(2);
             } else {
-            	var n = modelLive.fastest_times.split("#").reduce(function(a, b) { return parseFloat(a) + parseFloat(b); }, 0).toFixed(2);
+            	n = modelLive.fastest_times.split("#").reduce(function(a, b) { return parseFloat(a) + parseFloat(b); }, 0).toFixed(2);
                 cols9.push(n);
                 n = (cols8[cols8.length - 1] - cols9[cols9.length - 1]).toFixed(2);
-                cols10.push((n>0?'+':'') + n);
-                cols9[0] = "Fastest (" + modelLive.fastest_time_pilot.trim() + "):";
             }
+            cols10.push((n>0?'+':'') + n);
+            cols9[0] = "Fastest (" + modelLive.fastest_time_pilot.trim() + "):";
         }
     }
     if (modelLive.state >= 6) {
