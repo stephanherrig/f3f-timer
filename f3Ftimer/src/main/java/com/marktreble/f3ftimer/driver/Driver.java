@@ -47,7 +47,7 @@ public class Driver implements TTS.onInitListenerProxy {
     private RaceData datasource;
 	
 	public static int MAX_LEGS_PER_FLIGHT = 10;
-	public static int LEGS_PER_FLIGHT = 8;
+	public static int LEGS_PER_FLIGHT = 10;
 	
 	public Integer mPid;
 	public Integer mRid;
