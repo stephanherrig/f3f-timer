@@ -275,6 +275,8 @@ public class TcpIoService extends Service implements DriverInterface {
 					}
 				}
 			};
+			// send leg count to fly per flight
+			sendCmd(FT_LEGS + Driver.LEGS_PER_FLIGHT + " ");
 			Looper.loop();
 		}
 	}
@@ -407,9 +409,6 @@ public class TcpIoService extends Service implements DriverInterface {
 						}
 						sendThread = new SendThread();
 						sendThread.start();
-						
-						// send leg count to fly per flight
-						sendThread.sendCmd(FT_LEGS + Driver.LEGS_PER_FLIGHT + " ");
 						
 						mConnected = true;
 						driverConnected();
@@ -601,7 +600,11 @@ public class TcpIoService extends Service implements DriverInterface {
 			if (!stopConnectThread) e.printStackTrace();
 			return 1;
 		} else {
-			sendThread.sendCmd(""); // send alive
+			try {
+				sendThread.sendCmd(""); // send alive
+			} catch (Throwable e1) {
+				e1.printStackTrace();
+			}
 		}
 		return 0;
 	}

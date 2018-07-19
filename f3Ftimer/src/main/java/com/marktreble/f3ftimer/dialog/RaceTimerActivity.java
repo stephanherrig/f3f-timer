@@ -399,6 +399,10 @@ public class RaceTimerActivity extends FragmentActivity {
 					}
                     if (mCurrentFragment.getClass().equals(RaceTimerFrag4.class)) {
                         ((RaceTimerFrag4) mCurrentFragment).setFinal(time, fastestFlightTime, fastestFlightPilot);
+	
+						Intent i = new Intent("com.marktreble.f3ftimer.onLiveUpdate");
+						i.putExtra("com.marktreble.f3ftimer.value.flightTime", time);
+						sendBroadcast(i);
                     }
 				}
 
