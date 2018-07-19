@@ -46,6 +46,7 @@ public class Driver implements TTS.onInitListenerProxy {
 	private Context mContext;
     private RaceData datasource;
 	
+	public static int MAX_LEGS_PER_FLIGHT = 10;
 	public static int LEGS_PER_FLIGHT = 8;
 	
 	public Integer mPid;
@@ -55,13 +56,12 @@ public class Driver implements TTS.onInitListenerProxy {
 	public Float mPilot_Time = .0f;
 	public long mTimeOnCourse;
 	public long mLastLegTime;
-	public long[] mLegTimes = new long[LEGS_PER_FLIGHT];
     public Integer mLeg = 0;
     public boolean mWindLegal = true;
 	
 	private boolean mAudibleWindWarning = false;
 
-    private long mFastestLegTime[] = new long[LEGS_PER_FLIGHT];
+    private long mFastestLegTime[] = new long[MAX_LEGS_PER_FLIGHT];
     private float mFastestFlightTime = 0.0f;
     private String mFastestFlightPilot = "";
 
@@ -624,7 +624,6 @@ public class Driver implements TTS.onInitListenerProxy {
             deltaTime = 0;
         }
 		mLastLegTime+=time;
-		mLegTimes[mLeg] = time; 
 		mLeg++;
 			
 		// calculate the mean
