@@ -154,6 +154,7 @@
     <string name="snd_turn9">Last Turn</string>
     <string name="snd_penalty">Penalty</string>
     <string name="snd_working_time_started">Working Time Started</string>
+    <string name="snd_bib_number">Bib Number</string>
 
     <string name="next_pilot">Next Pilot</string>
     <string name="menu_finish_race">Finish Race</string>

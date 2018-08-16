@@ -95,5 +95,6 @@
     <string name="menu_scrub_round_confirm">Sind Sie sicher, dass Sie die Runde/Gruppe streichen wollen?</string>
     <string name="menu_scrub_round">Runde/Gruppe streichen</string>
     <string name="menu_finish_race">Rennen abschließen</string>
+    <string name="snd_bib_number">Startnummer</string>
 
 </resources>

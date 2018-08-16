@@ -84,6 +84,28 @@ public class RacePilotData {
 		cursor.close();
 		return p;
 	}
+	
+	public Pilot getRacePilot(int race_id, int round, int pilot_id){
+		String sql = "select rp.id, rp.pilot_id, rp.race_id, rp.status," +
+				" rp.firstname, rp.lastname, rp.email, rp.frequency, rp.models, rp.nationality, rp.language," +
+				" rp.team," +
+				" rt.time, rt.penalty, rt.reflight, rt.group_nr, rt.points, rt.start_pos " +
+				"from racepilots rp " +
+				"left join racetimes rt " +
+				"on (rt.race_id=rp.race_id and rt.pilot_id=rp.id and rt.round=?) " +
+				"where rp.race_id=? and rp.id=?" +
+				"order by rt.start_pos, rp.id";
+		String[] data = {Integer.toString(round), Integer.toString(race_id), Integer.toString(pilot_id)};
+		Cursor cursor = database.rawQuery(sql, data);
+		cursor.moveToFirst();
+		Pilot p = null;
+		if (!cursor.isAfterLast()) {
+			p = cursorToPilot(cursor, true);
+			p.round = round;
+		}
+		cursor.close();
+		return p;
+	}
 
 	public float getPilotTimeInRound(int race_id, int pilot_id, int round){
 		float time = 0;

@@ -463,7 +463,8 @@ public class Driver implements TTS.onInitListenerProxy {
                 public void run() {
                     RacePilotData datasource2 = new RacePilotData(mContext);
                     datasource2.open();
-                    Pilot pilot = datasource2.getPilot(mPid, mRid);
+					Pilot pilot = datasource2.getRacePilot(mRid, mRnd, mPid);
+                    //Pilot pilot = datasource2.getPilot(mPid, mRid);
                     datasource2.close();
                     if (pilot.language!= null && !pilot.language.equals("")){
                         mPilotLang = String.format("%s_%s", pilot.language, pilot.nationality);
@@ -485,7 +486,8 @@ public class Driver implements TTS.onInitListenerProxy {
 						Resources res = Languages.useLanguage(mContext, mPilotLang);
 						String text = res.getString(R.string.next_pilot);
 						Languages.useLanguage(mContext, mDefaultLang);
-						speak(String.format("%s %s %s",text , pilot.firstname, pilot.lastname), TextToSpeech.QUEUE_ADD);
+						speak(String.format("%s %s %s", text, pilot.firstname, pilot.lastname), TextToSpeech.QUEUE_ADD);
+						speak(String.format("%s %d", res.getString(R.string.snd_bib_number), pilot.start_pos), TextToSpeech.QUEUE_ADD);
 					}
                 }
             }, 200);
