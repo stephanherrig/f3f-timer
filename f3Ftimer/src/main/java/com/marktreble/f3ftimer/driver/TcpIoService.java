@@ -561,7 +561,6 @@ public class TcpIoService extends Service implements DriverInterface {
 											mWindMeasurementReceivedTimestamp = currentTime;
 											mWindDisconnected = false;
 											/* compute user readable wind report */
-											String wind_data = "";
 											if (((currentTime - mWindSpeedLegalTimestamp) < WIND_ILLEGAL_TIME) && ((currentTime - mWindDirectionLegalTimestamp) < WIND_ILLEGAL_TIME)) {
 												mWindLegal = true;
 												mDriver.windLegal();
