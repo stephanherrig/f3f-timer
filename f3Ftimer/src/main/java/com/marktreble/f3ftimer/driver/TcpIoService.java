@@ -672,13 +672,13 @@ public class TcpIoService extends Service implements DriverInterface {
 
 		if (!windLegal) {
 			if (windDisconnectedTimer >= WIND_ILLEGAL_TIME) {
-				str += " illegal (no data)";
+				str += " s: illegal (no data)";
 			} else if ((windSpeedIllegalTimer >= WIND_ILLEGAL_TIME) && (windDirectionIllegalTimer >= WIND_ILLEGAL_TIME)) {
-				str += " illegal speed and direction";
+				str += " s: illegal (bad speed and direction)";
 			} else if (windSpeedIllegalTimer >= WIND_ILLEGAL_TIME) {
-				str += " illegal speed";
+				str += " s: illegal (bad speed)";
 			} else if (windDirectionIllegalTimer >= WIND_ILLEGAL_TIME) {
-				str += " illegal direction";
+				str += " s: illegal (bad direction)";
 			}
 	    } else {
 			long windIllegalTimer;
@@ -687,11 +687,15 @@ public class TcpIoService extends Service implements DriverInterface {
 			} else {
 				windIllegalTimer = windDirectionIllegalTimer;
 			}
-
-			if (windIllegalTimer > 0) {
-				str += String.format("   legal (%ds)", (WIND_ILLEGAL_TIME - windIllegalTimer) / 1000);
+			
+			if ((windSpeedIllegalTimer > 0) && (windDirectionIllegalTimer > 0)) {
+				str += String.format(" s:  legal (%ds - bad speed and direction)", (WIND_ILLEGAL_TIME - windIllegalTimer) / 1000);
+			} else if (windSpeedIllegalTimer > 0) {
+				str += String.format(" s:  legal (%ds - bad speed)", (WIND_ILLEGAL_TIME - windIllegalTimer) / 1000);
+			} else if (windDirectionIllegalTimer > 0) {
+				str += String.format(" s:  legal (%ds - bad direction)", (WIND_ILLEGAL_TIME - windIllegalTimer) / 1000);
 			} else {
-				str += "   legal";
+				str += " s:  legal";
 			}
         }
         return str;

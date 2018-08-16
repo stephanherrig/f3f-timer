@@ -485,7 +485,7 @@ public class RaceResultsService extends Service {
 					windAngleAbsolute = Float.parseFloat(windValuesSplit[1].substring(0, windValuesSplit[1].indexOf("°")));
 					windAngleRelative = Float.parseFloat(windValuesSplit[2].substring(0, windValuesSplit[2].indexOf("°")));
 					windSpeed = Float.parseFloat(windValuesSplit[3].substring(0, windValuesSplit[3].indexOf("m/s")));
-					windStatus = windValues.substring(windValues.indexOf("m/s ") + 4);
+					windStatus = windValuesSplit[4];
 				} catch (NullPointerException | ArrayIndexOutOfBoundsException | NumberFormatException | StringIndexOutOfBoundsException e) {
 					e.printStackTrace();
 				}

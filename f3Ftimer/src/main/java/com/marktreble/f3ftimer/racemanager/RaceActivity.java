@@ -18,6 +18,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
@@ -28,6 +29,9 @@ import android.os.Parcelable;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.ContextMenu;
@@ -1400,7 +1404,19 @@ public class RaceActivity extends ListActivity {
                 }
             } else if (intent.hasExtra("com.marktreble.f3ftimer.value.wind_values")) {
 			    if (mPrefWindMeasurement) {
-                    mWindReadings.setText(intent.getExtras().getString("com.marktreble.f3ftimer.value.wind_values"));
+			        String windvalues = intent.getExtras().getString("com.marktreble.f3ftimer.value.wind_values");
+                    Spannable wordtoSpan = new SpannableString(windvalues);
+                    if (windvalues.contains("direction")) {
+                        wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 3, 12, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 15, 23, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    if (windvalues.contains("speed")) {
+                        wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 26, 37, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    if (windvalues.contains("no data")) {
+                        wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 0, windvalues.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    mWindReadings.setText(wordtoSpan);
                 }
 			}
 		}
