@@ -17,6 +17,8 @@ import android.util.Log;
 import com.marktreble.f3ftimer.R;
 import com.marktreble.f3ftimer.racemanager.RaceActivity;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -32,6 +34,8 @@ public class TcpIoService extends Service implements DriverInterface {
 	private static final String TAG = "TcpIoService";
 	private static final String DEFAULT_F3FTIMER_SERVER_IP = "192.168.42.2";
 	private static final int F3FTIMER_SERVER_PORT = 1234;
+    
+    private static final long WIND_ILLEGAL_TIME = 20000;
 
 	// Commands from raspberrypi
 	private static final String FT_TURNA = "A";
@@ -55,11 +59,14 @@ public class TcpIoService extends Service implements DriverInterface {
 	private int mTimerStatus = 0;
 	private int mState = 0;
 	private boolean mConnected = false;
-	private boolean mDriverDestroyed = true;
-
-	int mWindSpeedCounterSeconds = 0;
-	int mWindSpeedCounter = 0;
-	long mWindTimestamp;
+    
+    private boolean mDriverDestroyed = true;
+	
+	boolean mWindDisconnected = true;
+	boolean mWindLegal = false;
+	long mWindMeasurementReceivedTimestamp;
+	long mWindSpeedLegalTimestamp;
+	long mWindDirectionLegalTimestamp;
 
 	private boolean mTurnA = false;
 	private boolean mTurnB = false;
@@ -104,7 +111,7 @@ public class TcpIoService extends Service implements DriverInterface {
 
 		stopConnectThread = true;
 
-		if (mConnected == true) driverDisconnected();
+		if (mConnected) driverDisconnected();
 
 		try {
 			this.unregisterReceiver(onBroadcast);
@@ -441,13 +448,14 @@ public class TcpIoService extends Service implements DriverInterface {
 		int bufferLength; // bytes returned from read()
 		String wind_angle_str;
 		String wind_speed_str;
-		float wind_angle_absolute;
-		float wind_angle_relative;
-		float wind_speed;
-		mWindTimestamp = System.currentTimeMillis();
+		float wind_angle_absolute = 0;
+		float wind_angle_relative = 0;
+		float wind_speed = 0;
+		long currentTime;
 
 		//noinspection InfiniteLoopStatement
 		while(true) {
+			currentTime = System.currentTimeMillis();
 			try {
 				// Read from the InputStream
 				bufferLength = mmInStream.read(buffer);
@@ -532,43 +540,36 @@ public class TcpIoService extends Service implements DriverInterface {
 									break;
 								case FT_WIND:
 									if (mDriver.mWindMeasurement) {
-										wind_angle_str = str.substring(str.indexOf(",") + 1, str.lastIndexOf(","));
-										wind_speed_str = str.substring(str.lastIndexOf(",") + 1, str.length());
+										Log.d(TAG, "received: \"" + strbuf + "\"");
 										try {
+											wind_angle_str = str.substring(str.indexOf(",") + 1, str.lastIndexOf(","));
+											wind_speed_str = str.substring(str.lastIndexOf(",") + 1, str.length());
+											/* decode wind measurement */
 											wind_angle_absolute = (Float.parseFloat(wind_angle_str)) % 360;
 											wind_angle_relative = wind_angle_absolute - mSlopeOrientation;
 											if (wind_angle_absolute > 180 + mSlopeOrientation) {
 												wind_angle_relative -= 360;
 											}
 											wind_speed = Float.parseFloat(wind_speed_str);
-											if (wind_speed < 3 || wind_speed > 25) {
-												mWindSpeedCounter++;
-											} else {
-												mWindSpeedCounter = 0;
-												mWindSpeedCounterSeconds = 0;
-												mWindTimestamp = System.currentTimeMillis();
+											/* evaluate validity of wind values */
+											if ((wind_speed >= 3) && (wind_speed <= 25)) {
+												mWindSpeedLegalTimestamp = currentTime;
 											}
-											if (mWindSpeedCounter == 2) {
-												mWindSpeedCounterSeconds++;
-												mWindSpeedCounter = 0;
+											if ((wind_angle_relative <= 45) && (wind_angle_relative >= -45)) {
+												mWindDirectionLegalTimestamp = currentTime;
 											}
-											boolean windLegal;
-											if ((wind_angle_relative > 45 || wind_angle_relative < -45) || mWindSpeedCounterSeconds >= 20
-													|| (System.currentTimeMillis() - mWindTimestamp >= 20000)) {
-												mWindSpeedCounterSeconds = 20;
-												//Log.d("TcpIoService", String.format("Wind illegal (wind angle_absolute=%f, wind angle_relative=%f wind speed=%f wind_speed_counter=%d)", wind_angle_absolute, wind_angle_relative, wind_speed, mWindSpeedCounter));
-												mDriver.windIllegal();
-												windLegal = false;
-											} else {
-												//Log.d("TcpIoService", String.format("Wind legal (wind angle_absolute=%f, wind angle_relative=%f wind speed=%f wind_speed_counter=%d)", wind_angle_absolute, wind_angle_relative, wind_speed, mWindSpeedCounter));
+											mWindMeasurementReceivedTimestamp = currentTime;
+											mWindDisconnected = false;
+											/* compute user readable wind report */
+											String wind_data = "";
+											if (((currentTime - mWindSpeedLegalTimestamp) < WIND_ILLEGAL_TIME) && ((currentTime - mWindDirectionLegalTimestamp) < WIND_ILLEGAL_TIME)) {
+												mWindLegal = true;
 												mDriver.windLegal();
-												windLegal = true;
+											} else {
+												mWindLegal = false;
+												mDriver.windIllegal();
 											}
-											Intent i = new Intent("com.marktreble.f3ftimer.onUpdate");
-											String wind_data = formatWindValues(windLegal, wind_angle_absolute, wind_angle_relative, wind_speed, 20- mWindSpeedCounterSeconds);
-											i.putExtra("com.marktreble.f3ftimer.value.wind_values", wind_data);
-											sendBroadcast(i);
-										} catch (NumberFormatException e) {
+										} catch (NumberFormatException | IndexOutOfBoundsException e) {
 											if (!stopConnectThread) e.printStackTrace();
 										}
 									}
@@ -586,6 +587,24 @@ public class TcpIoService extends Service implements DriverInterface {
 			}
 			try {
 				sendThread.sendCmd(""); // send alive
+				
+				if (mDriver.mWindMeasurement) {
+					if (!mWindDisconnected) {
+						if ((currentTime - mWindMeasurementReceivedTimestamp) > WIND_ILLEGAL_TIME) {
+							wind_angle_absolute = 0;
+							wind_angle_relative = 0;
+							wind_speed = 0;
+							mWindLegal = false;
+							mDriver.windIllegal();
+							mWindDisconnected = true;
+						}
+						String wind_data = formatWindValues(mWindLegal, wind_angle_absolute, wind_angle_relative, wind_speed, mWindMeasurementReceivedTimestamp - mWindSpeedLegalTimestamp, mWindMeasurementReceivedTimestamp - mWindDirectionLegalTimestamp, currentTime - mWindMeasurementReceivedTimestamp);
+						/* send wind report to GUI */
+						Intent i = new Intent("com.marktreble.f3ftimer.onUpdate");
+						i.putExtra("com.marktreble.f3ftimer.value.wind_values", wind_data);
+						sendBroadcast(i);
+					}
+				}
 			} catch (Throwable e) {
 				if (1 == handleSocketThrowable(e)) {
 					break;
@@ -637,24 +656,45 @@ public class TcpIoService extends Service implements DriverInterface {
 		sendBroadcast(i);
 	}
 
-	public String formatWindValues(boolean windLegal, float windAngleAbsolute, float windAngleRelative, float windSpeed, int windSpeedCounter) {
-		String str = "";
-		if (windLegal && windSpeedCounter == 20) {
-			str += String.format("a: %s°", mNumberFormatter.format(windAngleAbsolute)).replace(",",".")
-					+ String.format(" r: %s°", mNumberFormatter.format(windAngleRelative)).replace(",",".")
-					+ String.format(" v: %.2fm/s", windSpeed).replace(",",".")
-					+ "   legal";
-		} else if (windLegal) {
-			str += String.format("a: %s°", mNumberFormatter.format(windAngleAbsolute)).replace(",",".")
-					+ String.format(" r: %s°", mNumberFormatter.format(windAngleRelative)).replace(",",".")
-					+ String.format(" v: %.2fm/s", windSpeed).replace(",",".")
-					+ String.format("   legal (%ds)", windSpeedCounter);
-		} else {
-			str += String.format("a: %s°", mNumberFormatter.format(windAngleAbsolute)).replace(",",".")
-					+ String.format(" r: %s°", mNumberFormatter.format(windAngleRelative)).replace(",",".")
-					+ String.format(" v: %.2fm/s", windSpeed).replace(",",".")
-					+ " illegal";
+	public String formatWindValues(boolean windLegal, float windAngleAbsolute, float windAngleRelative, float windSpeed, long windSpeedIllegalTimer, long windDirectionIllegalTimer, long windDisconnectedTimer) {
+		String str = String.format("a: %s°", StringUtils.leftPad(mNumberFormatter.format(windAngleAbsolute),7)).replace(",",".")
+				   + String.format(" r: %s°", StringUtils.leftPad(mNumberFormatter.format(windAngleRelative),7)).replace(",",".")
+				   + String.format(" v: %sm/s", StringUtils.leftPad(mNumberFormatter.format(windSpeed),7)).replace(",",".");
+		
+		if (windSpeedIllegalTimer > WIND_ILLEGAL_TIME) {
+			windSpeedIllegalTimer = WIND_ILLEGAL_TIME;
 		}
-		return str;
+		if (windDirectionIllegalTimer > WIND_ILLEGAL_TIME) {
+			windDirectionIllegalTimer = WIND_ILLEGAL_TIME;
+		}
+		if (windDisconnectedTimer > WIND_ILLEGAL_TIME) {
+			windDisconnectedTimer = WIND_ILLEGAL_TIME;
+		}
+
+		if (!windLegal) {
+			if (windDisconnectedTimer >= WIND_ILLEGAL_TIME) {
+				str += " illegal (no data)";
+			} else if ((windSpeedIllegalTimer >= WIND_ILLEGAL_TIME) && (windDirectionIllegalTimer >= WIND_ILLEGAL_TIME)) {
+				str += " illegal speed and direction";
+			} else if (windSpeedIllegalTimer >= WIND_ILLEGAL_TIME) {
+				str += " illegal speed";
+			} else if (windDirectionIllegalTimer >= WIND_ILLEGAL_TIME) {
+				str += " illegal direction";
+			}
+	    } else {
+			long windIllegalTimer;
+			if (windSpeedIllegalTimer > windDirectionIllegalTimer) {
+				windIllegalTimer = windSpeedIllegalTimer;
+			} else {
+				windIllegalTimer = windDirectionIllegalTimer;
+			}
+
+			if (windIllegalTimer > 0) {
+				str += String.format("   legal (%ds)", (WIND_ILLEGAL_TIME - windIllegalTimer) / 1000);
+			} else {
+				str += "   legal";
+			}
+        }
+        return str;
 	}
 }

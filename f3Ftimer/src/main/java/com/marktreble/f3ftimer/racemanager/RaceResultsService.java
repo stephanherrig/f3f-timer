@@ -63,11 +63,10 @@ public class RaceResultsService extends Service {
 	private String fastestFlightPilot;
 	private String deltaTimesStr = "";
 	private int penalty = 0;
-	private boolean windLegal = true;
 	private float windAngleAbsolute = 0;
 	private float windAngleRelative = 0;
 	private float windSpeed = 0;
-	private int windSpeedCounter = 0;
+	private String windStatus = "";
 	
 	@Override
     public void onCreate() {
@@ -482,16 +481,12 @@ public class RaceResultsService extends Service {
             if (intent.hasExtra("com.marktreble.f3ftimer.value.wind_values")) {
             	String windValues = intent.getStringExtra("com.marktreble.f3ftimer.value.wind_values");
 				String[] windValuesSplit = windValues.split(".: ");
-				windLegal = !windValues.contains("illegal");
 				try {
 					windAngleAbsolute = Float.parseFloat(windValuesSplit[1].substring(0, windValuesSplit[1].indexOf("°")));
 					windAngleRelative = Float.parseFloat(windValuesSplit[2].substring(0, windValuesSplit[2].indexOf("°")));
 					windSpeed = Float.parseFloat(windValuesSplit[3].substring(0, windValuesSplit[3].indexOf("m/s")));
-					windSpeedCounter = 0;
-					if (windValues.contains("(")) {
-						windSpeedCounter = Integer.parseInt(windValues.substring(windValues.indexOf("(") + 1, windValues.indexOf("s)")));
-					}
-				} catch (NullPointerException | ArrayIndexOutOfBoundsException | NumberFormatException e) {
+					windStatus = windValues.substring(windValues.indexOf("m/s ") + 4);
+				} catch (NullPointerException | ArrayIndexOutOfBoundsException | NumberFormatException | StringIndexOutOfBoundsException e) {
 					e.printStackTrace();
 				}
             }
@@ -510,7 +505,6 @@ public class RaceResultsService extends Service {
 				
 				if (data.equals("pref_results_server_style")) {
 					mResultsServerStyle = extras.getString("com.marktreble.f3ftimer.value");
-					return;
 				}
 			}
 		}
@@ -626,8 +620,7 @@ public class RaceResultsService extends Service {
             data += this.addParam("current_wind_angle_absolute", String.format("%.2f", windAngleAbsolute).replace(",", ".")) + ",";
             data += this.addParam("current_wind_angle_relative", String.format("%.2f", windAngleRelative).replace(",", ".")) + ",";
             data += this.addParam("current_wind_speed", String.format("%.2f", windSpeed).replace(",", ".")) + ",";
-            data += this.addParam("current_wind_speed_counter", String.format("%d", windSpeedCounter).replace(",", ".")) + ",";
-            data += this.addParam("current_wind_legal", String.format("%b", windLegal).replace(",", "."));
+            data += this.addParam("current_wind_status", String.format("%s", windStatus).replace(",", "."));
             data += "}]           ";
             
             String header;

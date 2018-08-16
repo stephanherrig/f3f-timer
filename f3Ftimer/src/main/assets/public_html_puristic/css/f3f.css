@@ -143,6 +143,7 @@ td, tr, th {
 }
 
 .span-live-header {
+    float: left;
 	font-weight: bold;
 }
 

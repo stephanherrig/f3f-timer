@@ -29,13 +29,7 @@ function render_liveinfo(){
     cols1 = "#Abs#Rel#Speed#Status";
     cols1 = cols1.split("#");
 	rows1.push(cols1);
-    if (modelLive.current_wind_legal == "true" && parseInt(modelLive.current_wind_speed_counter) == 20) {
-        cols1 = "Wind:#" + modelLive.current_wind_angle_absolute+" °#"+modelLive.current_wind_angle_relative+" °#"+modelLive.current_wind_speed+" m/s#legal";
-    } else if (modelLive.current_wind_legal == "true") {
-        cols1 = "Wind:#" + modelLive.current_wind_angle_absolute+" °#"+modelLive.current_wind_angle_relative+" °#"+modelLive.current_wind_speed+" m/s#illegal ("+modelLive.current_wind_speed_counter+" s)";
-    } else {
-        cols1 = "Wind:#" + modelLive.current_wind_angle_absolute+" °#"+modelLive.current_wind_angle_relative+" °#"+modelLive.current_wind_speed+" m/s#illegal";
-    }
+    cols1 = "Wind:#" + modelLive.current_wind_angle_absolute+" °#"+modelLive.current_wind_angle_relative+" °#"+modelLive.current_wind_speed+" m/s#"+modelLive.current_wind_status;
     cols1 = cols1.split("#");
 	rows1.push(cols1);
 
@@ -156,8 +150,11 @@ function createListItemLive(cellData, rowIndexLive, colIndexLive, tableNo){
 	if ((tableNo == 2 && colIndexLive > 0) ||
 		(tableNo != 2 && colIndexLive > 0 && rowIndexLive > 0)) {
 	    span = createSpanLiveLegs(cellData, rowIndexLive, colIndexLive, tableNo);
-    } else {
+    } else if (tableNo == 1 && colIndexLive > 0 && rowIndexLive == 0) {
 	    span = createSpan(cellData, 'span-live-header');
+    }
+    else {
+	    span = createSpan(cellData, 'span-header');
     }
 	return span;
 }
@@ -170,6 +167,8 @@ function createSpanLiveLegs(cellData, rowIndexLive, colIndexLive, tableNo){
         } else {
             span.classList.add('span-live-legs-pos');
         }
+	} else if ((tableNo == 1) && (colIndexLive > 0) && (rowIndexLive > 0)) {
+	    span.classList.add('span-left');
 	} else {
 	    span.classList.add('span-live-legs');
     }

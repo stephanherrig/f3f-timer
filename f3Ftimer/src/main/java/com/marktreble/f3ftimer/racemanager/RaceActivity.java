@@ -19,6 +19,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.BatteryManager;
@@ -1400,6 +1401,8 @@ public class RaceActivity extends ListActivity {
                 }
             } else if (intent.hasExtra("com.marktreble.f3ftimer.value.wind_values")) {
 			    if (mPrefWindMeasurement) {
+                    mWindReadings.setTypeface(Typeface.MONOSPACE);
+                    mWindReadings.setTextSize(20);
                     mWindReadings.setText(intent.getExtras().getString("com.marktreble.f3ftimer.value.wind_values"));
                 }
 			}
