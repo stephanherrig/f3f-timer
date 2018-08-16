@@ -1402,7 +1402,8 @@ public class RaceActivity extends ListActivity {
             } else if (intent.hasExtra("com.marktreble.f3ftimer.value.wind_values")) {
 			    if (mPrefWindMeasurement) {
                     mWindReadings.setTypeface(Typeface.MONOSPACE);
-                    mWindReadings.setTextSize(20);
+                    mWindReadings.setTextScaleX(0.9f);
+                    //mWindReadings.setTextSize(18);
                     mWindReadings.setText(intent.getExtras().getString("com.marktreble.f3ftimer.value.wind_values"));
                 }
 			}
