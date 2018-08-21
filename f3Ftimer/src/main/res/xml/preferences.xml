@@ -77,6 +77,11 @@
             android:summary="Always keep volume at full"
             android:defaultValue="true" />
 
+        <CheckBoxPreference
+            android:key="pref_speak_pilot_id"
+            android:title="Speak Pilot ID"
+            android:summary="Also speak Pilot ID when calling next pilot"
+            android:defaultValue="false" />
     </PreferenceCategory>
 
     <PreferenceCategory

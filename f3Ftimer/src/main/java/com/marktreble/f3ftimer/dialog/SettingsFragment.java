@@ -82,7 +82,6 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
         setBTDeviceSummary("pref_external_display");
 
         setStringSummary("pref_wind_angle_offset");
-        setStringSummary("pref_wind_measurement");
         
         setListSummary("pref_buzz_off_course", R.array.options_sounds);
         setListSummary("pref_buzz_on_course", R.array.options_sounds);
@@ -210,7 +209,8 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
          || key.equals("pref_audible_wind_warning")
          || key.equals("pref_full_volume")
          || key.equals("pref_extended_json_format")
-         || key.equals("pref_automatic_pilot_progression")){
+         || key.equals("pref_automatic_pilot_progression")
+         || key.equals("pref_speak_pilot_id")){
 		    sendBooleanValueToService(key, sharedPreferences.getBoolean(key, false));
     	}
 
@@ -327,16 +327,19 @@ public class SettingsFragment extends PreferenceFragment implements OnSharedPref
                 findPreference("pref_input_tcpio_ip").setEnabled(true);
                 findPreference("pref_find_peer_ip_switch").setEnabled(true);
                 findPreference("pref_find_peer_ip_text").setEnabled(true);
+                findPreference("pref_usb_baudrate").setEnabled(false);
+                findPreference("pref_usb_stopbits").setEnabled(false);
+                findPreference("pref_usb_databits").setEnabled(false);
+                findPreference("pref_usb_parity").setEnabled(false);
             } else {
                 findPreference("pref_input_tcpio_ip").setEnabled(false);
                 findPreference("pref_find_peer_ip_switch").setEnabled(false);
                 findPreference("pref_find_peer_ip_text").setEnabled(false);
+                findPreference("pref_usb_baudrate").setEnabled(true);
+                findPreference("pref_usb_stopbits").setEnabled(true);
+                findPreference("pref_usb_databits").setEnabled(true);
+                findPreference("pref_usb_parity").setEnabled(true);
             }
-
-            findPreference("pref_usb_baudrate").setEnabled(true);
-            findPreference("pref_usb_stopbits").setEnabled(true);
-            findPreference("pref_usb_databits").setEnabled(true);
-            findPreference("pref_usb_parity").setEnabled(true);
 
             findPreference("pref_input_src_device").setEnabled(false);
         }

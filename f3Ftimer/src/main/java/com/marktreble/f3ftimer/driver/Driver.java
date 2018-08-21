@@ -72,6 +72,7 @@ public class Driver implements TTS.onInitListenerProxy {
 
 	private boolean mSoundFXon;
 	private boolean mSpeechFXon;
+	private boolean mSpeechPilotNumberOn;
 	
 	private String mDefaultLang;
 	private String mDefaultSpeechLang;
@@ -146,6 +147,7 @@ public class Driver implements TTS.onInitListenerProxy {
 		mSoundFXon = intent.getBooleanExtra("pref_buzzer", false);
 		mSpeechFXon = intent.getBooleanExtra("pref_voice", false);
 		mDefaultSpeechLang = intent.getStringExtra("pref_voice_lang");
+		mSpeechPilotNumberOn = intent.getBooleanExtra("pref_speak_pilot_id", false);
 		if (mDefaultSpeechLang == null || mDefaultSpeechLang.equals("")) {
 			Locale default_lang = Locale.getDefault();
 			mDefaultSpeechLang = String.format("%s_%s", default_lang.getLanguage(), default_lang.getCountry());
@@ -349,6 +351,11 @@ public class Driver implements TTS.onInitListenerProxy {
 					mAudibleWindWarning = extras.getBoolean("com.marktreble.f3ftimer.value");
 					return;
 				}
+				
+				if (data.equals("pref_speak_pilot_id")){
+					mSpeechPilotNumberOn = extras.getBoolean("com.marktreble.f3ftimer.value");
+					return;
+				}
 
                 if (data.equals("pref_wind_measurement")) {
                     mWindMeasurement = intent.getExtras().getBoolean("com.marktreble.f3ftimer.value");
@@ -485,9 +492,12 @@ public class Driver implements TTS.onInitListenerProxy {
 					if (mSpeechFXon)  {
 						Resources res = Languages.useLanguage(mContext, mPilotLang);
 						String text = res.getString(R.string.next_pilot);
+						if (mSpeechPilotNumberOn)  {
+							text = String.format("%s %s %d , ", text, res.getString(R.string.snd_pilot_id), pilot.pilot_id);
+						}
+						text = String.format("%s %s %s", text, pilot.firstname, pilot.lastname);
 						Languages.useLanguage(mContext, mDefaultLang);
-						speak(String.format("%s %s %s", text, pilot.firstname, pilot.lastname), TextToSpeech.QUEUE_ADD);
-						speak(String.format("%s %d", res.getString(R.string.snd_bib_number), pilot.start_pos), TextToSpeech.QUEUE_ADD);
+						speak(text, TextToSpeech.QUEUE_ADD);
 					}
                 }
             }, 200);
