@@ -61,7 +61,6 @@ public class RaceTimerFrag4 extends RaceTimerFrag {
 		
 		Button ab = (Button) mView.findViewById(R.id.button_abort);
 		ab.setText(getResources().getText(R.string.abort));
-		ab.setVisibility(View.VISIBLE);
 		ab.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
@@ -75,6 +74,11 @@ public class RaceTimerFrag4 extends RaceTimerFrag {
 				mRaceTimerActivity.getFragment(new RaceTimerFrag6(), 6); // Abort submenu (reflight or score 0)
 			}
 		});
+		if (mRaceTimerActivity.mFinalTime < 0) {
+			ab.setVisibility(View.VISIBLE);
+		} else {
+			ab.setVisibility(View.GONE);
+		}
 		
 		Button refly = (Button) mView.findViewById(R.id.button_refly);
 		refly.setOnClickListener(new View.OnClickListener() {
@@ -86,6 +90,11 @@ public class RaceTimerFrag4 extends RaceTimerFrag {
 				
 			}
 		});
+		if (mRaceTimerActivity.mFinalTime < 0) {
+			refly.setVisibility(View.GONE);
+		} else {
+			refly.setVisibility(View.VISIBLE);
+		}
 		
 		Button fin = (Button) mView.findViewById(R.id.button_finish);
 		fin.setOnClickListener(new View.OnClickListener() {
@@ -97,13 +106,16 @@ public class RaceTimerFrag4 extends RaceTimerFrag {
 				
 			}
 		});
+		if (mRaceTimerActivity.mFinalTime < 0) {
+			fin.setVisibility(View.GONE);
+		} else {
+			fin.setVisibility(View.VISIBLE);
+		}
 		
 		SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
 		String soft_buttons = sharedPref.getString("pref_input_src", getString(R.string.Demo));
 		if (soft_buttons.equals(getString(R.string.Demo))) {
 			Button baseA = (Button) mView.findViewById(R.id.base_A);
-			baseA.setVisibility(View.VISIBLE);
-			
 			baseA.setOnClickListener(new Button.OnClickListener() {
 				@Override
 				public void onClick(View v) {
@@ -112,16 +124,19 @@ public class RaceTimerFrag4 extends RaceTimerFrag {
 			});
 			
 			Button baseB = (Button) mView.findViewById(R.id.base_B);
-			baseB.setVisibility(View.VISIBLE);
-			
 			baseB.setOnClickListener(new Button.OnClickListener() {
 				@Override
 				public void onClick(View v) {
 					mRaceTimerActivity.sendCommand("baseB");
 				}
 			});
-			
-			
+			if (mRaceTimerActivity.mFinalTime < 0) {
+				baseA.setVisibility(View.VISIBLE);
+				baseB.setVisibility(View.VISIBLE);
+			} else {
+				baseA.setVisibility(View.GONE);
+				baseB.setVisibility(View.GONE);
+			}
 		}
 		
 		TextView cd = (TextView) mView.findViewById(R.id.time);
