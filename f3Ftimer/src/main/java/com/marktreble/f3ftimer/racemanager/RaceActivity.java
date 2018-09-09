@@ -157,7 +157,8 @@ public class RaceActivity extends ListActivity {
     private RaceData.Group mGroupScoring;
 
     private Handler mRaceTitleHandler;
-
+    private AsyncTask<Void, Void, String> mFetchIpAsyncTask;
+    
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -250,6 +251,8 @@ public class RaceActivity extends ListActivity {
         unregisterReceiver(mBatInfoReceiver);
         
         mRaceTitleHandler = null;
+        mFetchIpAsyncTask.cancel(true);
+        mFetchIpAsyncTask = null;
         
         if (isFinishing()) {
             Log.i("DRIVER", "STOP SERVERS");
@@ -492,7 +495,8 @@ public class RaceActivity extends ListActivity {
         TextView results = findViewById(R.id.results_ip);
   		if (mPrefResults){
   		    results.setVisibility(View.VISIBLE);
-            new fetchIPAsyncTask(results).execute();
+  		    mFetchIpAsyncTask = new fetchIPAsyncTask(results);
+            mFetchIpAsyncTask.execute();
 
         } else {
             results.setVisibility(View.GONE);
