@@ -653,7 +653,8 @@ public class Driver implements TTS.onInitListenerProxy {
 		i.putExtra("com.marktreble.f3ftimer.fastestLegTime", mFastestLegTime[mLeg-1]);
 		i.putExtra("com.marktreble.f3ftimer.fastestFlightPilot", mFastestFlightPilot);
 		mContext.sendBroadcast(i);
-
+		Log.d(TAG, "leg_complete " + mLeg);
+		
 		if (deltaTime < 0) {
 			mFastestLegTime[mLeg-1] = time;
 		}

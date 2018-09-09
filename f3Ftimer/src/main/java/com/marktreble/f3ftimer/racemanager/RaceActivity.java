@@ -75,7 +75,6 @@ import com.marktreble.f3ftimer.resultsmanager.ResultsActivity;
 import com.marktreble.f3ftimer.usb.USB;
 import com.marktreble.f3ftimer.wifi.Wifi;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -113,8 +112,8 @@ public class RaceActivity extends ListActivity {
     private Integer mRid;
 	private Integer mRnd;
 	private Race mRace;
-    private String mInputSource = "";
-    private String mInputSourceDevice = "";
+    private String mInputSource;
+    private String mInputSourceDevice;
 	private boolean mPrefResults;
     private boolean mPrefResultsDisplay;
     private String mPrefExternalDisplay;
@@ -124,26 +123,25 @@ public class RaceActivity extends ListActivity {
     private boolean mRoundNotStarted;
     private boolean mGroupNotStarted;
     private Pilot mNextPilot;
-    private Pilot mNextReflightPilot;
 
-    private boolean mPilotDialogShown = false; // Used to determine the action when the start button is pressed
-    private boolean mTimeoutDialogShown = false;
-    private boolean mMenuShown = false;
-
+    private boolean mPilotDialogShown; // Used to determine the action when the start button is pressed
+    private boolean mTimeoutDialogShown;
+    private boolean mMenuShown;
+    
 	private Context mContext;
 	
 	public AlertDialog mDlg;
 	String[] _options;  	// String array of all pilots in database    	
 	boolean[] _selections;	// bool array of which has been selected
 	
-	boolean mWifiSavedState = false;
-
+	boolean mWifiSavedState;
+	
     private TextView mPower;
     private ImageView mStatus;
     private String mStatusIcon;
     private boolean mConnectionStatus;
     private TextView mWindReadings;
-    private String mWindValues ="";
+    private String mWindValues;
     
     private String mExternalDisplayStatusIcon;
     private ImageView mExternalDisplayStatus;
@@ -152,14 +150,45 @@ public class RaceActivity extends ListActivity {
     private String mBatteryLevel;
 
     private ListView mListView;
-    private static Parcelable mListViewScrollPos = null;
+    private static Parcelable mListViewScrollPos;
 
     private RaceData.Group mGroupScoring;
-
+    
+    private String mResultsServerIp;
+    
     private Handler mRaceTitleHandler;
+    private Handler mScrollHandler;
+    private Handler mNextRoundHandler;
+    private Handler mNextPilotHandler;
+    
+    private Runnable mCheckConnectionRunnable;
+    private Runnable mNextPilotRunnable;
+    private Runnable mNextRoundRunnable;
+    private Runnable mScrollToNextPilotRunnable;
+    private Runnable mScrollToTopRunnable;
+    
+    private class FetchIPAsyncTask extends AsyncTask<Void, Void, String> {
+        @Override
+        protected String doInBackground(Void... params) {
+            return Wifi.getIPAddress(true);
+        }
+        
+        @Override
+        protected void onPostExecute(String ip) {
+            // update the UI (this is executed on UI thread)
+            super.onPostExecute(ip);
+            TextView resultsServerIpView = findViewById(R.id.results_ip);
+            if (resultsServerIpView != null) {
+                mResultsServerIp = ip;
+                resultsServerIpView.setText(String.format("%s:8080", ip));
+            }
+        }
+    }
+    
     private AsyncTask<Void, Void, String> mFetchIpAsyncTask;
     
-
+    
+    
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
         Log.i("RACEACTIVITY", "ONCREATE");
@@ -214,17 +243,63 @@ public class RaceActivity extends ListActivity {
         if (savedInstanceState == null) {
             // Start Results server
             startServers();
+    
+            mInputSource = "";
+            mInputSourceDevice = "";
+            mPilotDialogShown = false;
+            mTimeoutDialogShown = false;
+            mMenuShown = false;
+            mWifiSavedState = false;
+            mWindValues ="";
+            mListViewScrollPos = null;
+            mResultsServerIp = "";
+            
+            mFetchIpAsyncTask = new FetchIPAsyncTask();
+            mRaceTitleHandler = new Handler();
+            mScrollHandler = new Handler();
+            mNextRoundHandler = new Handler();
+            mNextPilotHandler = new Handler();
+    
+            mCheckConnectionRunnable = new Runnable(){
+                public void run(){
+                    Log.d("UUUUU", "CHECKING CONN");
+                    sendCommand("get_connection_status");
+                    if (mFetchIpAsyncTask.getStatus() == AsyncTask.Status.FINISHED) {
+                        mFetchIpAsyncTask = new FetchIPAsyncTask();
+                    }
+                    if (mFetchIpAsyncTask.getStatus() == AsyncTask.Status.PENDING) {
+                        mFetchIpAsyncTask.execute();
+                    }
+                    mRaceTitleHandler.postDelayed(this, 5000);
+                }
+            };
+            mNextPilotRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    showNextPilot();
+                }
+            };
+            mNextRoundRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    nextRound();
+                }
+            };
+            mScrollToNextPilotRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    mListView.smoothScrollToPositionFromTop(mNextPilot.position - 1, 0, 500);
+                }
+            };
+            mScrollToTopRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    mListView.smoothScrollToPositionFromTop(0, 0, 500);
+                }
+            };
+    
+            mRaceTitleHandler.postDelayed(mCheckConnectionRunnable, 100);
         }
-
-        final int delay = 5000; //milliseconds
-        mRaceTitleHandler = new Handler();
-        mRaceTitleHandler.postDelayed(new Runnable(){
-            public void run(){
-                Log.d("UUUUU", "CHECKING CONN");
-                sendCommand("get_connection_status");
-                if (mRaceTitleHandler != null) mRaceTitleHandler.postDelayed(this, delay);
-            }
-        }, delay);
         
         setTitle(mRace.name);
         setRaceRoundTitle(Integer.toString(mRace.round));
@@ -244,27 +319,37 @@ public class RaceActivity extends ListActivity {
 	
     @Override
     public void onDestroy(){
-        Log.i("DRIVER (Race Activity)", "Destroyed");
+        Log.i("RaceActivity", "onDestroy");
         super.onDestroy();
 
         unregisterReceiver(onBroadcast);
         unregisterReceiver(mBatInfoReceiver);
         
-        mRaceTitleHandler = null;
-        mFetchIpAsyncTask.cancel(true);
-        mFetchIpAsyncTask = null;
-        
         if (isFinishing()) {
-            Log.i("DRIVER", "STOP SERVERS");
+            Log.d("RaceActivity", "onDestroy finish");
             stopServers();
+//            finishActivity(DLG_TIMER);
+            mFetchIpAsyncTask.cancel(true);
+            mRaceTitleHandler.removeCallbacks(mCheckConnectionRunnable);
+            mScrollHandler.removeCallbacks(mScrollToTopRunnable);
+            mScrollHandler.removeCallbacks(mScrollToNextPilotRunnable);
+            mNextRoundHandler.removeCallbacks(mNextRoundRunnable);
+            mNextPilotHandler.removeCallbacks(mNextPilotRunnable);
         }
     }
 
-	
 	public void onBackPressed (){
+        Log.d("RaceActivity", "onBackPressed");
 		/* Don't destroy the servers when back is pressed.
 		   Stop them when a race is selected, so that results can still be viewed in the meantime, minimizing downtime. */
 		//stopServers();
+        mFetchIpAsyncTask.cancel(true);
+        mRaceTitleHandler.removeCallbacks(mCheckConnectionRunnable);
+        mScrollHandler.removeCallbacks(mScrollToTopRunnable);
+        mScrollHandler.removeCallbacks(mScrollToNextPilotRunnable);
+        mNextRoundHandler.removeCallbacks(mNextRoundRunnable);
+        mNextPilotHandler.removeCallbacks(mNextPilotRunnable);
+        
 		super.onBackPressed();
 	}
 
@@ -368,6 +453,8 @@ public class RaceActivity extends ListActivity {
     public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         
+        outState.putString("mResultsServerIp", mResultsServerIp);
+        
         outState.putBoolean("mPrefWindMeasurement", mPrefWindMeasurement);
         outState.putString("mWindValues", mWindValues);
         outState.putBoolean("mPilotDialogShown", mPilotDialogShown);
@@ -396,6 +483,8 @@ public class RaceActivity extends ListActivity {
     @SuppressWarnings("unchecked")
 	@Override
 	public void onRestoreInstanceState(@NonNull Bundle savedInstanceState){
+        mResultsServerIp = savedInstanceState.getString("mResultsServerIp");
+        
         mPrefWindMeasurement = savedInstanceState.getBoolean("mPrefWindMeasurement");
         mWindValues = savedInstanceState.getString("mWindValues");
         mPilotDialogShown = savedInstanceState.getBoolean("mPilotDialogShown");
@@ -461,8 +550,14 @@ public class RaceActivity extends ListActivity {
         } else {
             mWindReadings.setVisibility(View.GONE);
         }
-
-        setResultsIP();
+        
+        TextView resultsServerIp = findViewById(R.id.results_ip);
+        if (mPrefResults){
+            resultsServerIp.setVisibility(View.VISIBLE);
+            resultsServerIp.setText(mResultsServerIp);
+        } else {
+            resultsServerIp.setVisibility(View.GONE);
+        }
     }
 	
 	public void onPause(){
@@ -491,76 +586,26 @@ public class RaceActivity extends ListActivity {
         setRaceRoundTitle(Integer.toString(mRnd));
 	}
 
-    private void setResultsIP(){
-        TextView results = findViewById(R.id.results_ip);
-  		if (mPrefResults){
-  		    results.setVisibility(View.VISIBLE);
-  		    mFetchIpAsyncTask = new fetchIPAsyncTask(results);
-            mFetchIpAsyncTask.execute();
-
-        } else {
-            results.setVisibility(View.GONE);
-        }
-	}
-
-	private static class fetchIPAsyncTask extends AsyncTask<Void, Void, String> {
-
-        WeakReference<TextView> mViewWR;
-
-        fetchIPAsyncTask(TextView view){
-            mViewWR = new WeakReference<>(view);
-        }
-
-        @Override
-        protected String doInBackground(Void... params) {
-            String ip = "";
-            while (ip.equals("")) {
-                ip = Wifi.getIPAddress(true);
-                if (ip.equals("")){
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e){
-                        e.printStackTrace();
-                    }
-
-                }
-            }
-            return ip;
-        }
-
-        @Override
-        protected void onPostExecute(String ip) {
-            // update the UI (this is executed on UI thread)
-            super.onPostExecute(ip);
-            TextView view = mViewWR.get();
-            view.setText(String.format("%s:8080", ip));
-        }
-    }
-
 	/*
 	 * Start a pilot on his run
 	 */
 	@Override
 	public void onListItemClick(ListView l, View v, int position, long id) {
 		// Pilot has been clicked, so start the Race Timer Activity
-
         Pilot p = mArrPilots.get(position);
-        int round = mArrRounds.get(position);
         if ((p.time==0 || Float.isNaN(p.time)) && !p.flown && p.status!=Pilot.STATUS_RETIRED){
-            String bib_no = mArrNumbers.get(position);
-        	 mPilotDialogShown = showPilotDialog(round, p.id, bib_no);
+            showPilotDialog(p.round, p.id, p.number);
         }
 	}
-	
+ 
 	/*
 	 * Return from dialogs
 	 */
 	 
 	@Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-
         super.onActivityResult(requestCode, resultCode, data);
-		mPilotDialogShown = false;
+        
         getNamesArray();
         mArrAdapter.notifyDataSetChanged();
 
@@ -583,12 +628,7 @@ public class RaceActivity extends ListActivity {
 
 			if (requestCode == RaceActivity.DLG_NEXT_ROUND){
 				// Positive response from next round dialog
-                new Handler().postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        nextRound();
-                    }
-                }, 600);
+                mNextRoundHandler.postDelayed(mNextRoundRunnable, 600);
 			}
 
 			if (requestCode == RaceActivity.DLG_TIMER){
@@ -596,22 +636,11 @@ public class RaceActivity extends ListActivity {
 
 				if (mNextPilot != null){
 					// Bring up next pilot's dialog
-                    new Handler().postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            mListView.smoothScrollToPositionFromTop(mNextPilot.position - 1, 0, 500);
-                        }
-                    }, 100);
+                    mScrollHandler.postDelayed(mScrollToNextPilotRunnable, 100);
 
                     if (!mFirstInGroup.get(mNextPilot.position)) {
-                        new Handler().postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                showNextPilot();
-                            }
-                        }, 600);
+                        mNextPilotHandler.postDelayed(mNextPilotRunnable, 600);
                     }
-
                 } else {
 					// Bring up the next round dialog
 					showNextRound();
@@ -641,19 +670,9 @@ public class RaceActivity extends ListActivity {
 
                 // Resume timeout - start next pilot's dialog
 				if (mNextPilot != null){
-                    new Handler().postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            mListView.smoothScrollToPositionFromTop(mNextPilot.position - 1, 0, 500);
-                        }
-                    }, 100);
+                    mScrollHandler.postDelayed(mScrollToNextPilotRunnable, 100);
 
-                    new Handler().postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            showNextPilot();
-                        }
-                    }, 600);
+                    mNextPilotHandler.postDelayed(mNextPilotRunnable, 600);
 				}
 			}
 			
@@ -872,7 +891,7 @@ public class RaceActivity extends ListActivity {
         mRoundNotStarted = true;
         mGroupNotStarted = true;
         mNextPilot = null;
-        mNextReflightPilot = null;
+        Pilot nextReflightPilot = null;
 
         // No. of bib numbers skipped
         // (used to close up the gaps in the list, and pop the unused ends off the arrays at the end)
@@ -989,12 +1008,12 @@ public class RaceActivity extends ListActivity {
                     // Get the next reflight pilot in the running order
                     if ((p.time==0 || Float.isNaN(p.time)) && !p.flown &&
                             ((p.status & Pilot.STATUS_REFLIGHT) == Pilot.STATUS_REFLIGHT)
-                            && (mNextReflightPilot == null || mNextReflightPilot.position > position)) {
-                        mNextReflightPilot = p;
-                        mNextReflightPilot.position = position;
-                        mNextReflightPilot.number = mArrNumbers.get(position);
+                            && (nextReflightPilot == null || nextReflightPilot.position > position)) {
+                        nextReflightPilot = p;
+                        nextReflightPilot.position = position;
+                        nextReflightPilot.number = mArrNumbers.get(position);
                         // Log the round number against the next pilot, so that the data is available to the external "start_pressed" message
-                        mNextReflightPilot.round = mRnd + r;
+                        nextReflightPilot.round = mRnd + r;
                     }
 
                     ftg[g] = (p.time > 0) ? Math.min(ftg[g], p.time) : ftg[g];
@@ -1035,7 +1054,7 @@ public class RaceActivity extends ListActivity {
             mFirstInGroup.remove(index);
         }
 
-        if (mNextPilot == null) mNextPilot = mNextReflightPilot;
+        if (mNextPilot == null) mNextPilot = nextReflightPilot;
 
         datasource.close();
 
@@ -1199,28 +1218,22 @@ public class RaceActivity extends ListActivity {
 		}
 	}
 
-    private boolean showPilotDialog(int round, int pilot_id, String bib_no){
-        if (mPilotDialogShown) return true;
-        if (mTimeoutDialogShown) return false;
-        if (mMenuShown) return false;
+    private void showPilotDialog(int round, int pilot_id, String bib_no){
+        if (mPilotDialogShown) return;
+        if (mTimeoutDialogShown) return;
+        if (mMenuShown) return;
         Intent intent = new Intent(this, RaceTimerActivity.class);
         intent.putExtra("pilot_id", pilot_id);
         intent.putExtra("race_id", mRid);
         intent.putExtra("round", round);
         intent.putExtra("bib_no", bib_no);
         startActivityForResult(intent,DLG_TIMER);
-
-        return true;
+        mPilotDialogShown = true;
     }
 
 	private void showNextPilot(){
-        if (mPilotDialogShown) return;
-        if (mTimeoutDialogShown) return;
-        if (mMenuShown) return;
-
         if (mNextPilot.position != null) {
-            int round = mArrRounds.get(mNextPilot.position);
-            mPilotDialogShown = showPilotDialog(round, mNextPilot.id, mNextPilot.number);
+            showPilotDialog(mNextPilot.round, mNextPilot.id, mNextPilot.number);
         } else {
             showNextRound();
         }
@@ -1257,15 +1270,7 @@ public class RaceActivity extends ListActivity {
 	}
 	
 	private void showTimeoutComplete(){
-        if (mPilotDialogShown) return;
-        if (mMenuShown) return;
-        if (mTimeoutDialogShown) return;
-
-        Intent intent = new Intent(mContext, RaceRoundTimeoutActivity.class);
-        intent.putExtra("start", 0l);
-        intent.putExtra("group_scored", (mGroupScoring.num_groups > 1));
-        startActivityForResult(intent, DLG_TIMEOUT);
-        mTimeoutDialogShown = true;
+        showTimeout(0l);
 	}
 
 	private void showTimeoutNotStarted(){
@@ -1323,27 +1328,14 @@ public class RaceActivity extends ListActivity {
                     scorePilotZero(p);
                     if (mNextPilot != null) {
                         // Scroll to next pilot
-                        new Handler().postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                mListView.smoothScrollToPositionFromTop(mNextPilot.position - 1, 0, 500);
-                                }
-                        }, 100);
+                        mScrollHandler.postDelayed(mScrollToNextPilotRunnable, 100);
                     }
                 }
 
 				if (data.equals("start_pressed")){
-					if (!mPilotDialogShown){
-						if (mNextPilot != null){
-							Intent intent2 = new Intent(mContext, RaceTimerActivity.class);
-							intent2.putExtra("pilot_id", mNextPilot.id);
-                            intent2.putExtra("race_id", mRid);
-                            intent2.putExtra("round", mNextPilot.round);
-                            intent2.putExtra("bib_no", mNextPilot.number);
-							startActivityForResult(intent2, DLG_TIMER);
-                            mPilotDialogShown = true;
-						}
-					}
+                    if (mNextPilot != null){
+                        showPilotDialog(mNextPilot.round, mNextPilot.id, mNextPilot.number);
+                    }
 				}
 				
 				if (data.equals("show_timeout")){
@@ -1588,20 +1580,10 @@ public class RaceActivity extends ListActivity {
 
         setRaceRoundTitle(Integer.toString(mRace.round));
 
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                mListView.smoothScrollToPositionFromTop(0, 0, 500);
-            }
-        }, 100);
+        mScrollHandler.postDelayed(mScrollToTopRunnable, 100);
 
         // Bring up next pilot's dialog
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                showNextPilot();
-            }
-        }, 1000);
+        mNextPilotHandler.postDelayed(mNextPilotRunnable, 1000);
 		
 	}
 

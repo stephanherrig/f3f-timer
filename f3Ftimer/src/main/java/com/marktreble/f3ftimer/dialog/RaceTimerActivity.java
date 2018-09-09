@@ -226,6 +226,11 @@ public class RaceTimerActivity extends FragmentActivity {
 		i.putExtra("com.marktreble.f3ftimer.value.deltaTime", 0.0f);
 		sendBroadcast(i);
 	}
+	
+	public void onBackPressed (){
+		onDestroy();
+		super.onBackPressed();
+	}
 
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event)  {
@@ -325,10 +330,8 @@ public class RaceTimerActivity extends FragmentActivity {
             if (mADialog != null) {
                 mADialog.dismiss();
                 mADialog = null;
-
             }
         }
-
     }
 	
 	public void getFragment(Fragment f, int id){
@@ -446,6 +449,7 @@ public class RaceTimerActivity extends FragmentActivity {
 					long fastestLegTime = extras.getLong("com.marktreble.f3ftimer.fastestLegTime");
 					String fastestFlightPilot = extras.getString("com.marktreble.f3ftimer.fastestFlightPilot");
 					long deltaTime = extras.getLong("com.marktreble.f3ftimer.delta");
+					Log.d("RaceTimerActivity", "leg_complete " + legNumber);
                     if (mCurrentFragment.getClass().equals(RaceTimerFrag4.class)) {
                         ((RaceTimerFrag4) mCurrentFragment).setLeg(legNumber, estimatedFlightTime, fastestLegTime, legTime, deltaTime, fastestFlightPilot);
                     }
