@@ -1,9 +1,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="match_parent"
-	android:layout_height="wrap_content"
-	android:background="@android:color/transparent"
-	android:orientation="vertical"
-	 >
+			  xmlns:tools="http://schemas.android.com/tools"
+			  android:layout_width="match_parent"
+			  android:layout_height="wrap_content"
+			  android:background="@android:color/transparent"
+			  android:orientation="vertical"
+	>
 
 	<LinearLayout
 		android:id="@+id/minimised"
@@ -11,19 +12,20 @@
 		android:layout_height="wrap_content"
 		android:orientation="horizontal"
 		android:visibility="gone">
+
 		<TextView
 			android:id="@+id/minnumber"
 			android:layout_width="24dp"
 			android:layout_height="24dp"
+			android:layout_gravity="center"
+			android:layout_marginRight="8dp"
 			android:layout_weight="0"
 			android:background="@drawable/circle"
 			android:gravity="center"
-			android:layout_gravity="center"
-			android:layout_marginRight="8dp"
 			android:minHeight="68dp"
 			android:textColor="@color/text2"
 			android:textSize="16sp"
-			android:textStyle="bold" >
+			android:textStyle="bold">
 
 		</TextView>
 
@@ -31,21 +33,22 @@
 			android:id="@+id/minpilot"
 			android:layout_width="0dp"
 			android:layout_height="match_parent"
-			android:layout_weight="1"
 			android:layout_gravity="center_horizontal"
+			android:layout_weight="1"
+			android:text="@string/thirty"
 			android:textColor="@color/text3"
 			android:textSize="10sp"
-			android:text="@string/thirty"
 			/>
+
 		<TextView
 			android:id="@+id/mintime"
 			android:layout_width="0dp"
 			android:layout_height="match_parent"
-			android:layout_weight="1"
 			android:layout_gravity="center_horizontal"
+			android:layout_weight="1"
+			android:text="@string/thirty"
 			android:textColor="@color/text3"
 			android:textSize="20sp"
-			android:text="@string/thirty"
 			/>
 	</LinearLayout>
 
@@ -57,25 +60,27 @@
 		android:paddingBottom="10dp"
 		android:paddingLeft="10dp"
 		android:paddingRight="10dp"
-		android:paddingTop="10dp" >
+		android:paddingTop="10dp">
+
 		<LinearLayout
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:orientation="horizontal"
-			android:layout_gravity="center_horizontal">
+			android:layout_gravity="center_horizontal"
+			android:orientation="horizontal">
+
 			<TextView
 				android:id="@+id/number"
-				android:layout_width="32dp"
-				android:layout_height="32dp"
+				android:layout_width="@dimen/_20sdp"
+				android:layout_height="@dimen/_20sdp"
+				android:layout_gravity="center"
+				android:layout_marginRight="8dp"
 				android:layout_weight="0"
 				android:background="@drawable/circle"
 				android:gravity="center"
-				android:layout_gravity="center"
-				android:layout_marginRight="8dp"
-				android:minHeight="68dp"
+				android:minHeight="@dimen/_20sdp"
 				android:textColor="@color/text2"
-				android:textSize="16sp"
-				android:textStyle="bold" >
+				android:textSize="@dimen/_8ssp"
+				android:textStyle="bold">
 
 			</TextView>
 
@@ -86,7 +91,8 @@
 				android:layout_gravity="center_vertical"
 				android:text="@string/empty"
 				android:textAppearance="?android:attr/textAppearanceLarge"
-				android:textColor="@color/text3" >
+				android:textColor="@color/text3"
+				android:textSize="@dimen/_10ssp">
 			</TextView>
 		</LinearLayout>
 
@@ -94,34 +100,16 @@
 			android:id="@+id/time"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
+			android:layout_gravity="center_horizontal"
 			android:text="@string/thirty"
-			android:layout_gravity="center_horizontal"
 			android:textColor="@color/text3"
-			android:textSize="60sp" >
+			android:textSize="@dimen/_30ssp"
+			>
 
 		</TextView>
 
-		<TextView
-			android:id="@+id/status"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:text=""
-			android:layout_gravity="center_horizontal"
-			android:textColor="@color/text3"
-			android:textAppearance="?android:attr/textAppearanceLarge" >
-		</TextView>
-
-		<TextView
-				android:id="@+id/wind_warning"
-				android:layout_width="fill_parent"
-				android:layout_height="wrap_content"
-				android:drawableLeft="@drawable/warning"
-				android:visibility="invisible"
-				android:text="@string/wind_warning"
-				android:textAppearance="?android:attr/textAppearanceMedium"
-				android:textColor="@color/text_warning" />
-
-		<LinearLayout android:layout_width="fill_parent"
+		<LinearLayout
+			android:layout_width="fill_parent"
 			android:layout_height="wrap_content"
 			android:orientation="horizontal">
 
@@ -133,7 +121,8 @@
 				android:layout_weight="1"
 				android:text="@string/empty"
 				android:textAppearance="?android:attr/textAppearanceLarge"
-				android:textColor="@color/text3" >
+				android:textColor="@color/text3"
+				android:textSize="@dimen/_10ssp">
 
 			</TextView>
 
@@ -142,97 +131,134 @@
 				android:layout_width="0dp"
 				android:layout_height="wrap_content"
 				android:layout_gravity="end"
-				android:textAlignment="textEnd"
 				android:layout_weight="1"
 				android:text="@string/empty"
+				android:textAlignment="textEnd"
 				android:textAppearance="?android:attr/textAppearanceLarge"
-				android:textColor="@color/text3" >
+				android:textColor="@color/text3"
+				android:textSize="@dimen/_10ssp">
 
 			</TextView>
+
 		</LinearLayout>
 
+		<TextView
+			android:id="@+id/status"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center_horizontal"
+			android:layout_weight="1"
+			android:textAppearance="?android:attr/textAppearanceLarge"
+			android:textColor="@color/text3"
+			android:textSize="@dimen/_10ssp">
+		</TextView>
+
+		<TextView
+			android:id="@+id/wind_warning"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_gravity="center_horizontal"
+			android:layout_weight="1"
+			android:drawableLeft="@drawable/warning"
+			android:text="@string/wind_warning"
+			android:textAppearance="?android:attr/textAppearanceMedium"
+			android:textColor="@color/text_warning"
+			android:textSize="@dimen/_8ssp"
+			android:visibility="invisible"/>
+
 		<LinearLayout
-				android:layout_width="fill_parent"
-				android:layout_height="wrap_content"
-				android:orientation="horizontal"
-				android:layout_marginTop="@dimen/twenty"
-				style="?android:attr/buttonBarButtonStyle">
+			style="?android:attr/buttonBarButtonStyle"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginTop="@dimen/_4sdp"
+			android:orientation="horizontal">
+
 			<Button
 				android:id="@+id/base_A"
-				android:layout_width="80dp"
-				android:layout_height="80dp"
-				android:textColor="@color/text2"
-				android:textSize="50sp"
+				android:layout_width="@dimen/_30sdp"
+				android:layout_height="@dimen/_30sdp"
+				android:background="@drawable/soft_buzzer"
 				android:text="@string/A"
-				android:visibility="gone"
-				android:background="@drawable/soft_buzzer" />
+				android:textColor="@color/text2"
+				android:textSize="@dimen/_16ssp"
+				android:visibility="gone"/>
+
 			<Button
 				android:id="@+id/button_start_working_time"
+				style="?android:attr/buttonBarButtonStyle"
 				android:layout_width="fill_parent"
+				android:layout_height="@dimen/_30sdp"
 				android:layout_weight="1"
-				android:layout_height="80dp"
 				android:text="@string/start_working_time"
-				android:visibility="gone"
-				style="?android:attr/buttonBarButtonStyle">
+				android:visibility="gone">
 
 			</Button>
+
 			<Button
 				android:id="@+id/button_model_launched"
+				style="?android:attr/buttonBarButtonStyle"
 				android:layout_width="fill_parent"
+				android:layout_height="@dimen/_30sdp"
 				android:layout_weight="1"
-				android:layout_height="80dp"
 				android:text="@string/model_launch"
-				android:visibility="gone"
-				style="?android:attr/buttonBarButtonStyle">
+				android:visibility="gone">
 			</Button>
-		   <Button
+
+			<Button
 				android:id="@+id/button_abort"
+				style="?android:attr/buttonBarButtonStyle"
 				android:layout_width="fill_parent"
+				android:layout_height="@dimen/_30sdp"
 				android:layout_weight="1"
-				android:layout_height="80dp"
 				android:text="@string/abort"
-			   android:visibility="gone"
-				style="?android:attr/buttonBarButtonStyle">
+				android:visibility="gone">
 			</Button>
-			<Button android:id="@+id/button_refly"
+
+			<Button
+				android:id="@+id/button_refly"
+				style="?android:attr/buttonBarButtonStyle"
 				android:layout_width="wrap_content"
-				android:layout_height="80dp"
+				android:layout_height="@dimen/_30sdp"
 				android:layout_weight="1"
 				android:text="@string/refly"
-				android:visibility="gone"
-				style="?android:attr/buttonBarButtonStyle"/>
+				android:visibility="gone"/>
 
-			<Button android:id="@+id/button_finish"
+			<Button
+				android:id="@+id/button_finish"
+				style="?android:attr/buttonBarButtonStyle"
 				android:layout_width="wrap_content"
-				android:layout_height="80dp"
+				android:layout_height="@dimen/_30sdp"
 				android:layout_weight="1"
 				android:text="@string/finish"
-				android:visibility="gone"
-				style="?android:attr/buttonBarButtonStyle"/>
+				android:visibility="gone"/>
 
-			<Button android:id="@+id/button_zero"
+			<Button
+				android:id="@+id/button_zero"
+				style="?android:attr/buttonBarButtonStyle"
 				android:layout_width="wrap_content"
-				android:layout_height="80dp"
+				android:layout_height="@dimen/_30sdp"
 				android:layout_weight="1"
 				android:text="@string/score_zero"
-				android:visibility="gone"
-				style="?android:attr/buttonBarButtonStyle"/>
+				android:visibility="gone"/>
+
 			<Button
 				android:id="@+id/base_B"
-				android:layout_width="80dp"
-				android:layout_height="80dp"
-				android:textColor="@color/text2"
-				android:textSize="50sp"
+				android:layout_width="@dimen/_30sdp"
+				android:layout_height="@dimen/_30sdp"
+				android:background="@drawable/soft_buzzer"
 				android:text="@string/B"
-				android:visibility="gone"
-				android:background="@drawable/soft_buzzer" />
-			<Button android:id="@+id/button_next_pilot"
+				android:textColor="@color/text2"
+				android:textSize="@dimen/_16ssp"
+				android:visibility="gone"/>
+
+			<Button
+				android:id="@+id/button_next_pilot"
+				style="?android:attr/buttonBarButtonStyle"
 				android:layout_width="wrap_content"
-				android:layout_height="80dp"
+				android:layout_height="@dimen/_30sdp"
 				android:layout_weight="1"
 				android:text="@string/button_next_pilot"
-				android:visibility="gone"
-				style="?android:attr/buttonBarButtonStyle"/>
+				android:visibility="gone"/>
 		</LinearLayout>
 	</LinearLayout>
 </LinearLayout>

@@ -183,12 +183,12 @@
             android:defaultValue="false" />
 
         <ListPreference
-            android:defaultValue="f3ftimer"
+            android:key="pref_results_server_style"
+            android:title="Results Server Style"
+            android:summary="Results Server Style"
             android:entries="@array/options_results_server_style"
             android:entryValues="@array/options_results_server_style"
-            android:key="pref_results_server_style"
-            android:summary="Results Server Style"
-            android:title="Results Server Style"/>
+            android:defaultValue="puristic"/>
 
         <CheckBoxPreference
             android:key="pref_wifi_hotspot"

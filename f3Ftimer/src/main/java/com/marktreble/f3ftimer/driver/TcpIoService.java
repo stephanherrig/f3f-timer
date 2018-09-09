@@ -61,12 +61,14 @@ public class TcpIoService extends Service implements DriverInterface {
 	private boolean mConnected = false;
     
     private boolean mDriverDestroyed = true;
-	
-	boolean mWindDisconnected = true;
-	boolean mWindLegal = false;
-	long mWindMeasurementReceivedTimestamp;
-	long mWindSpeedLegalTimestamp;
-	long mWindDirectionLegalTimestamp;
+    
+    private boolean mWindDisconnected = true;
+    private boolean mWindLegal = false;
+    private boolean mWindSpeedIlegal = false;
+    private boolean mWindDirectionIlegal = false;
+    private long mWindMeasurementReceivedTimestamp;
+    private long mWindSpeedLegalTimestamp;
+    private long mWindDirectionLegalTimestamp;
 
 	private boolean mTurnA = false;
 	private boolean mTurnB = false;
@@ -551,17 +553,32 @@ public class TcpIoService extends Service implements DriverInterface {
 												wind_angle_relative -= 360;
 											}
 											wind_speed = Float.parseFloat(wind_speed_str);
+
 											/* evaluate validity of wind values */
-											if ((wind_speed >= 3) && (wind_speed <= 25)) {
-												mWindSpeedLegalTimestamp = currentTime;
-											}
-											if ((wind_angle_relative <= 45) && (wind_angle_relative >= -45)) {
-												mWindDirectionLegalTimestamp = currentTime;
-											}
+                                            if ((wind_speed >= 3) && (wind_speed <= 25)) {
+                                                mWindSpeedLegalTimestamp = currentTime;
+                                                mWindSpeedIlegal = false;
+                                            } else {
+                                                if (!mWindSpeedIlegal) {
+                                                    mWindSpeedLegalTimestamp = currentTime - 1;
+                                                    mWindSpeedIlegal = true;
+                                                }
+                                            }
+                                            if ((wind_angle_relative <= 45) && (wind_angle_relative >= -45)) {
+                                                mWindDirectionLegalTimestamp = currentTime;
+                                                mWindDirectionIlegal = false;
+                                            } else {
+                                                if (!mWindDirectionIlegal) {
+                                                    mWindDirectionLegalTimestamp = currentTime - 1;
+                                                    mWindDirectionIlegal = true;
+                                                }
+                                            }
 											mWindMeasurementReceivedTimestamp = currentTime;
 											mWindDisconnected = false;
+
 											/* compute user readable wind report */
-											if (((currentTime - mWindSpeedLegalTimestamp) < WIND_ILLEGAL_TIME) && ((currentTime - mWindDirectionLegalTimestamp) < WIND_ILLEGAL_TIME)) {
+											if (((currentTime - mWindSpeedLegalTimestamp) < WIND_ILLEGAL_TIME) &&
+												((currentTime - mWindDirectionLegalTimestamp) < WIND_ILLEGAL_TIME)) {
 												mWindLegal = true;
 												mDriver.windLegal();
 											} else {
@@ -597,7 +614,10 @@ public class TcpIoService extends Service implements DriverInterface {
 							mDriver.windIllegal();
 							mWindDisconnected = true;
 						}
-						String wind_data = formatWindValues(mWindLegal, wind_angle_absolute, wind_angle_relative, wind_speed, mWindMeasurementReceivedTimestamp - mWindSpeedLegalTimestamp, mWindMeasurementReceivedTimestamp - mWindDirectionLegalTimestamp, currentTime - mWindMeasurementReceivedTimestamp);
+						String wind_data = formatWindValues(mWindLegal, wind_angle_absolute, wind_angle_relative, wind_speed,
+								mWindMeasurementReceivedTimestamp - mWindSpeedLegalTimestamp,
+								mWindMeasurementReceivedTimestamp - mWindDirectionLegalTimestamp,
+								currentTime - mWindMeasurementReceivedTimestamp);
 						/* send wind report to GUI */
 						Intent i = new Intent("com.marktreble.f3ftimer.onUpdate");
 						i.putExtra("com.marktreble.f3ftimer.value.wind_values", wind_data);

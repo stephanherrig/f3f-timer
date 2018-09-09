@@ -16,19 +16,7 @@ import com.marktreble.f3ftimer.R;
 import com.marktreble.f3ftimer.racemanager.RaceActivity;
 
 public class RaceTimerFrag5 extends RaceTimerFrag {
-
-    public Float mFinalTime;
-
-    private boolean mClickedOnce = false;
-    private boolean mStartPressed = false;
-    public RaceTimerFrag5(){
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
+    
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -40,16 +28,15 @@ public class RaceTimerFrag5 extends RaceTimerFrag {
         next.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mClickedOnce) return;
-                mClickedOnce = true;
-                mStartPressed = true;
+                if (mRaceTimerActivity.mAlreadyProgressed) return;
+                mRaceTimerActivity.mAlreadyProgressed = true;
                 next();
 
             }
         });
 
         TextView cd = (TextView) mView.findViewById(R.id.time);
-        String str_time = String.format("%.2f", mFinalTime);
+        String str_time = String.format("%.2f", mRaceTimerActivity.mFinalTime);
         cd.setText(str_time);
 
         TextView min = (TextView) mView.findViewById(R.id.mintime);
@@ -60,7 +47,7 @@ public class RaceTimerFrag5 extends RaceTimerFrag {
 
         super.setPilotName();
 
-        if (((RaceTimerActivity)getActivity()).mWindowState == RaceTimerActivity.WINDOW_STATE_MINIMIZED) {
+        if (mRaceTimerActivity.mWindowState == RaceTimerActivity.WINDOW_STATE_MINIMIZED) {
             setMinimized();
         }
 
@@ -69,21 +56,22 @@ public class RaceTimerFrag5 extends RaceTimerFrag {
     }
 
     public void next(){
-        RaceTimerActivity a = (RaceTimerActivity)getActivity();
-        a.sendCommand("abort");
-        a.setResult(RaceActivity.RESULT_OK);
-        a.finish();
+        mRaceTimerActivity.mFlying = false;
+        mRaceTimerActivity.mFinalTime = -1.0f;
+
+        mRaceTimerActivity.sendCommand("abort");
+        mRaceTimerActivity.setResult(RaceActivity.RESULT_OK);
+        mRaceTimerActivity.finish();
 
 		/* send to ResultsServer Live Listener */
         Intent i = new Intent("com.marktreble.f3ftimer.onLiveUpdate");
         i.putExtra("com.marktreble.f3ftimer.value.state", 0);
-        a.sendBroadcast(i);
+        mRaceTimerActivity.sendBroadcast(i);
     }
 
     public void startPressed(){
-        mClickedOnce = true;
-        if (!mStartPressed) {
-            mStartPressed = true;
+        if (!mRaceTimerActivity.mAlreadyProgressed) {
+            mRaceTimerActivity.mAlreadyProgressed = true;
             next();
         }
     }

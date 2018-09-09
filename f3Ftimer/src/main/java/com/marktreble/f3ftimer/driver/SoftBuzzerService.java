@@ -13,6 +13,8 @@ import android.util.Log;
 import com.marktreble.f3ftimer.R;
 import com.marktreble.f3ftimer.racemanager.RaceActivity;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.text.DecimalFormat;
 
 public class SoftBuzzerService extends Service implements DriverInterface, Thread.UncaughtExceptionHandler {
@@ -32,10 +34,14 @@ public class SoftBuzzerService extends Service implements DriverInterface, Threa
 
     private Handler mWindEmulator;
     private static float mSlopeOrientation = 0.0f;
-
-    int mWindSpeedCounterSeconds = 0;
-    int mWindSpeedCounter = 0;
-    long mWindTimestamp;
+    
+    private boolean mWindLegal = false;
+    private boolean mWindSpeedIlegal = false;
+    private boolean mWindDirectionIlegal = false;
+    private long mWindSpeedLegalTimestamp;
+    private long mWindDirectionLegalTimestamp;
+    
+    private static final long WIND_ILLEGAL_TIMEOUT = 20000;
 
 	/*
 	 * General life-cycle function overrides
@@ -137,47 +143,56 @@ public class SoftBuzzerService extends Service implements DriverInterface, Threa
 
         // Output dummy wind readings
         Bundle extras = intent.getExtras();
-        mWindTimestamp = System.currentTimeMillis();
         mSlopeOrientation = 0.f;
         if (extras != null)
             mSlopeOrientation = Float.parseFloat(extras.getString("pref_wind_angle_offset", "0.0"));
 
         mWindEmulator = new Handler();
         Runnable runnable = new Runnable() {
+            long currentTime;
 
             @Override
             public void run() {
+                currentTime = System.currentTimeMillis();
                 Intent i = new Intent("com.marktreble.f3ftimer.onUpdate");
-                float wind_angle_absolute = mSlopeOrientation + (float)(Math.random()*2) - 1.f;
+                float wind_angle_absolute = mSlopeOrientation + (float)(Math.random()*20) - 1.f;
                 float wind_angle_relative = wind_angle_absolute - mSlopeOrientation;
                 if (wind_angle_absolute > 180 + mSlopeOrientation) {
                     wind_angle_relative -= 360;
                 }
-                float wind_speed = 6f + (float)(Math.random()*3) - 1.5f;
-                if (wind_speed < 3 || wind_speed > 25) {
-                    mWindSpeedCounter++;
+                float wind_speed = 3f + (float)(Math.random()*3) - 1.5f;
+
+                if ((wind_speed >= 3) && (wind_speed <= 25)) {
+                    mWindSpeedLegalTimestamp = currentTime;
+                    mWindSpeedIlegal = false;
                 } else {
-                    mWindSpeedCounter = 0;
-                    mWindSpeedCounterSeconds = 0;
-                    mWindTimestamp = System.currentTimeMillis();
+                    if (!mWindSpeedIlegal) {
+                        mWindSpeedLegalTimestamp = currentTime - 1;
+                        mWindSpeedIlegal = true;
+                    }
                 }
-                if (mWindSpeedCounter == 2) {
-                    mWindSpeedCounterSeconds++;
-                    mWindSpeedCounter = 0;
+                if ((wind_angle_relative <= 45) && (wind_angle_relative >= -45)) {
+                    mWindDirectionLegalTimestamp = currentTime;
+                    mWindDirectionIlegal = false;
+                } else {
+                    if (!mWindDirectionIlegal) {
+                        mWindDirectionLegalTimestamp = currentTime - 1;
+                        mWindDirectionIlegal = true;
+                    }
                 }
 
-                boolean windLegal;
-                if ((wind_angle_relative > 45 || wind_angle_relative < -45) || mWindSpeedCounterSeconds >= 20
-                        || (System.currentTimeMillis() - mWindTimestamp >= 20000)) {
-                    mWindSpeedCounterSeconds = 20;
-                    mDriver.windIllegal();
-                    windLegal = false;
-                } else {
+                /* compute user readable wind report */
+                if (((currentTime - mWindSpeedLegalTimestamp) < WIND_ILLEGAL_TIMEOUT) &&
+                    ((currentTime - mWindDirectionLegalTimestamp) < WIND_ILLEGAL_TIMEOUT)) {
+                    mWindLegal = true;
                     mDriver.windLegal();
-                    windLegal = true;
+                } else {
+                    mWindLegal = false;
+                    mDriver.windIllegal();
                 }
 
-                String wind_data = formatWindValues(windLegal, wind_angle_absolute, wind_angle_relative, wind_speed, 20- mWindSpeedCounterSeconds);
+                String wind_data = formatWindValues(mWindLegal, wind_angle_absolute, wind_angle_relative, wind_speed,
+                        currentTime - mWindSpeedLegalTimestamp, currentTime - mWindDirectionLegalTimestamp,0);
                 i.putExtra("com.marktreble.f3ftimer.value.wind_values", wind_data);
                 sendBroadcast(i);
 
@@ -256,23 +271,38 @@ public class SoftBuzzerService extends Service implements DriverInterface, Threa
 
     }
 
-    public String formatWindValues(boolean windLegal, float windAngleAbsolute, float windAngleRelative, float windSpeed, int windSpeedCounter) {
-        String str = "";
-        if (windLegal && windSpeedCounter == 20) {
-            str += String.format("a: %s°", mNumberFormatter.format(windAngleAbsolute)).replace(",",".")
-                    + String.format(" r: %s°", mNumberFormatter.format(windAngleRelative)).replace(",",".")
-                    + String.format(" v: %.2fm/s", windSpeed).replace(",",".")
-                    + "   legal";
-        } else if (windLegal) {
-            str += String.format("a: %s°", mNumberFormatter.format(windAngleAbsolute)).replace(",",".")
-                    + String.format(" r: %s°", mNumberFormatter.format(windAngleRelative)).replace(",",".")
-                    + String.format(" v: %.2fm/s", windSpeed).replace(",",".")
-                    + String.format("   legal (%ds)", windSpeedCounter);
+    public String formatWindValues(boolean windLegal, float windAngleAbsolute, float windAngleRelative, float windSpeed, long windSpeedIllegalTimer, long windDirectionIllegalTimer, long windDisconnectedTimer) {
+        String str = String.format("a: %s°", StringUtils.leftPad(mNumberFormatter.format(windAngleAbsolute),7)).replace(",",".")
+                + String.format(" r: %s°", StringUtils.leftPad(mNumberFormatter.format(windAngleRelative),7)).replace(",",".")
+                + String.format(" v: %sm/s", StringUtils.leftPad(mNumberFormatter.format(windSpeed),7)).replace(",",".");
+    
+        if (!windLegal) {
+            if (windDisconnectedTimer >= WIND_ILLEGAL_TIMEOUT) {
+                str += " s: illegal (no data)";
+            } else if ((windSpeedIllegalTimer >= WIND_ILLEGAL_TIMEOUT) && (windDirectionIllegalTimer >= WIND_ILLEGAL_TIMEOUT)) {
+                str += " s: illegal (bad speed and direction)";
+            } else if (windSpeedIllegalTimer >= WIND_ILLEGAL_TIMEOUT) {
+                str += " s: illegal (bad speed)";
+            } else if (windDirectionIllegalTimer >= WIND_ILLEGAL_TIMEOUT) {
+                str += " s: illegal (bad direction)";
+            }
         } else {
-            str += String.format("a: %s°", mNumberFormatter.format(windAngleAbsolute)).replace(",",".")
-                    + String.format(" r: %s°", mNumberFormatter.format(windAngleRelative)).replace(",",".")
-                    + String.format(" v: %.2fm/s", windSpeed).replace(",",".")
-                    + " illegal";
+            long windIllegalTimer;
+            if (windSpeedIllegalTimer > windDirectionIllegalTimer) {
+                windIllegalTimer = windSpeedIllegalTimer;
+            } else {
+                windIllegalTimer = windDirectionIllegalTimer;
+            }
+        
+            if ((windSpeedIllegalTimer > 0) && (windDirectionIllegalTimer > 0)) {
+                str += String.format(" s:  legal (%ds - bad speed and direction)", (int)Math.ceil((WIND_ILLEGAL_TIMEOUT - windIllegalTimer) / 1000f));
+            } else if (windSpeedIllegalTimer > 0) {
+                str += String.format(" s:  legal (%ds - bad speed)", (int)Math.ceil((WIND_ILLEGAL_TIMEOUT - windIllegalTimer) / 1000f));
+            } else if (windDirectionIllegalTimer > 0) {
+                str += String.format(" s:  legal (%ds - bad direction)", (int)Math.ceil((WIND_ILLEGAL_TIMEOUT - windIllegalTimer) / 1000f));
+            } else {
+                str += " s:  legal";
+            }
         }
         return str;
     }

@@ -15,12 +15,6 @@ import com.marktreble.f3ftimer.racemanager.RaceActivity;
  */
 public class RaceTimerFrag6 extends RaceTimerFrag {
 
-    private boolean mClickedOnce = false;
-
-    public RaceTimerFrag6(){
-
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -32,8 +26,8 @@ public class RaceTimerFrag6 extends RaceTimerFrag {
         zero.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mClickedOnce) return;
-                mClickedOnce = true;
+                if (mRaceTimerActivity.mAlreadyProgressed) return;
+                mRaceTimerActivity.mAlreadyProgressed = true;
                 score_zero();
 
             }
@@ -44,8 +38,8 @@ public class RaceTimerFrag6 extends RaceTimerFrag {
         refly.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mClickedOnce) return;
-                mClickedOnce = true;
+                if (mRaceTimerActivity.mAlreadyProgressed) return;
+                mRaceTimerActivity.mAlreadyProgressed = true;
                 reflight();
 
             }
@@ -53,34 +47,31 @@ public class RaceTimerFrag6 extends RaceTimerFrag {
 
         super.setPilotName();
 
-        if (((RaceTimerActivity)getActivity()).mWindowState == RaceTimerActivity.WINDOW_STATE_MINIMIZED) {
+        if (mRaceTimerActivity.mWindowState == RaceTimerActivity.WINDOW_STATE_MINIMIZED) {
             setMinimized();
         }
 
         // Start Round Timeout now
-        RaceTimerActivity a = (RaceTimerActivity) getActivity();
-        a.sendCommand("begin_timeout");
+        mRaceTimerActivity.sendCommand("begin_timeout");
 
         return mView;
     }
 
     public void reflight(){
-        RaceTimerActivity a = (RaceTimerActivity)getActivity();
-        a.reflight();
+        mRaceTimerActivity.reflight();
 
         Intent i = new Intent("com.marktreble.f3ftimer.onLiveUpdate");
         i.putExtra("com.marktreble.f3ftimer.value.state", 0);
-        a.sendBroadcast(i);
+        mRaceTimerActivity.sendBroadcast(i);
     }
 
     public void score_zero(){
-        RaceTimerActivity a = (RaceTimerActivity)getActivity();
-        a.scorePilotZero(a.mPilot.id);
-        a.setResult(RaceActivity.RESULT_ABORTED, null);
-        a.finish();
+        mRaceTimerActivity.scorePilotZero(mRaceTimerActivity.mPilot.id);
+        mRaceTimerActivity.setResult(RaceActivity.RESULT_ABORTED, null);
+        mRaceTimerActivity.finish();
 
         Intent i = new Intent("com.marktreble.f3ftimer.onLiveUpdate");
         i.putExtra("com.marktreble.f3ftimer.value.state", 0);
-        a.sendBroadcast(i);
+        mRaceTimerActivity.sendBroadcast(i);
     }
 }

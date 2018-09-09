@@ -12,36 +12,37 @@
     		  android:layout_height="wrap_content"
     		  android:background="#075271">
 
-	    <TextView
-	        android:id="@+id/race_title"
-	        android:layout_width="0dp"
-	        android:layout_height="wrap_content"
-	        android:layout_gravity="start"
-	        android:layout_weight="1"
-            android:lines="1"
-            android:ellipsize="end"
-	        android:gravity="center_vertical"
-	        android:paddingLeft="20dp"
-	        android:paddingRight="30dp"
-	        android:textColor="@color/text2"
-	        android:textSize="24sp"
-	        android:textStyle="bold" >
-        
-    	</TextView>
-    	<TextView
-	        android:id="@+id/battery_level"
-	        android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-	        android:layout_gravity="end"
-	        android:layout_weight="0"
-	        android:gravity="center_vertical"
-	        android:paddingLeft="20dp"
-	        android:paddingRight="4dp"
-	        android:textColor="@color/text2"
-	        android:textSize="24sp"
-	        android:textStyle="bold" >
-        
-    	</TextView>
+	<TextView
+		android:id="@+id/race_title"
+		android:layout_width="0dp"
+		android:layout_height="wrap_content"
+		android:layout_gravity="start"
+		android:layout_weight="1"
+		android:ellipsize="end"
+		android:gravity="center_vertical"
+		android:lines="1"
+		android:paddingLeft="@dimen/_4sdp"
+		android:paddingRight="@dimen/_4sdp"
+		android:textColor="@color/text2"
+		android:textSize="@dimen/_10ssp"
+		android:textStyle="bold">
+
+	</TextView>
+
+    <TextView
+        android:id="@+id/battery_level"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_weight="0"
+        android:gravity="center_vertical"
+        android:paddingLeft="20dp"
+        android:paddingRight="4dp"
+        android:textColor="@color/text2"
+        android:textSize="@dimen/_10ssp"
+        android:textStyle="bold">
+
+    </TextView>
 
 		<ImageView
 			android:id="@+id/external_display_connection_status"
@@ -62,23 +63,23 @@
 
 </LinearLayout>
 
-    <TextView
-        android:id="@+id/results_ip"
-        android:background="#075271"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="start"
-        android:layout_weight="0"
-        android:lines="1"
-        android:ellipsize="end"
-        android:gravity="center_vertical"
-        android:paddingLeft="20dp"
-        android:paddingRight="30dp"
-        android:textColor="@color/text2"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:visibility="gone">
-    </TextView>
+	<TextView
+		android:id="@+id/results_ip"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_gravity="start"
+		android:layout_weight="0"
+		android:background="#075271"
+		android:ellipsize="end"
+		android:gravity="center_vertical"
+		android:lines="1"
+		android:paddingLeft="@dimen/_4sdp"
+		android:paddingRight="@dimen/_4sdp"
+		android:textColor="@color/text2"
+		android:textSize="@dimen/_10ssp"
+		android:textStyle="bold"
+		android:visibility="gone">
+	</TextView>
 
 	<TextView
 		android:id="@+id/wind_readings"
@@ -88,11 +89,12 @@
 		android:layout_weight="0"
 		android:lines="1"
 		android:gravity="center_vertical"
+		android:paddingLeft="@dimen/_4sdp"
 		android:paddingTop="4dp"
 		android:paddingBottom="4dp"
 		android:background="@color/text2"
 		android:textColor="@color/text4"
-		android:textSize="14sp"
+		android:textSize="@dimen/_8ssp"
 		android:textStyle="bold"
 		android:typeface="monospace"
         android:visibility="gone">

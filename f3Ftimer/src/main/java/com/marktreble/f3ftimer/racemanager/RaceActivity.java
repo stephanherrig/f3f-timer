@@ -143,7 +143,8 @@ public class RaceActivity extends ListActivity {
     private String mStatusIcon;
     private boolean mConnectionStatus;
     private TextView mWindReadings;
-
+    private String mWindValues ="";
+    
     private String mExternalDisplayStatusIcon;
     private ImageView mExternalDisplayStatus;
     private boolean mDisplayStatus;
@@ -209,22 +210,20 @@ public class RaceActivity extends ListActivity {
         registerReceiver(onBroadcast, new IntentFilter("com.marktreble.f3ftimer.onUpdate"));
         registerReceiver(mBatInfoReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 
-        if (savedInstanceState == null){
-	        // Start Results server
-	       	startServers();
-
-            final int delay = 5000; //milliseconds
-    
-            mRaceTitleHandler = new Handler();
-            mRaceTitleHandler.postDelayed(new Runnable(){
-                public void run(){
-                    Log.d("UUUUU", "CHECKING CONN");
-                    sendCommand("get_connection_status");
-                    if (mRaceTitleHandler != null) mRaceTitleHandler.postDelayed(this, delay);
-                }
-            }, delay);
-
+        if (savedInstanceState == null) {
+            // Start Results server
+            startServers();
         }
+
+        final int delay = 5000; //milliseconds
+        mRaceTitleHandler = new Handler();
+        mRaceTitleHandler.postDelayed(new Runnable(){
+            public void run(){
+                Log.d("UUUUU", "CHECKING CONN");
+                sendCommand("get_connection_status");
+                if (mRaceTitleHandler != null) mRaceTitleHandler.postDelayed(this, delay);
+            }
+        }, delay);
         
         setTitle(mRace.name);
         setRaceRoundTitle(Integer.toString(mRace.round));
@@ -365,7 +364,13 @@ public class RaceActivity extends ListActivity {
 	@Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putInt("round", mRnd);
+        
+        outState.putBoolean("mPrefWindMeasurement", mPrefWindMeasurement);
+        outState.putString("mWindValues", mWindValues);
+        outState.putBoolean("mPilotDialogShown", mPilotDialogShown);
+        outState.putBoolean("mTimeoutDialogShown", mTimeoutDialogShown);
+        outState.putBoolean("mWifiSavedState", mWifiSavedState);
+
         outState.putInt("raceid", mRid);
         outState.putSerializable("mArrRounds", mArrRounds);
         outState.putBoolean("connection_status", mConnectionStatus);
@@ -383,13 +388,17 @@ public class RaceActivity extends ListActivity {
 
         mListViewScrollPos = mListView.onSaveInstanceState();
         outState.putParcelable("listviewscrollpos", mListViewScrollPos);
-
     }
 
     @SuppressWarnings("unchecked")
 	@Override
 	public void onRestoreInstanceState(@NonNull Bundle savedInstanceState){
-        mRnd = savedInstanceState.getInt("round");
+        mPrefWindMeasurement = savedInstanceState.getBoolean("mPrefWindMeasurement");
+        mWindValues = savedInstanceState.getString("mWindValues");
+        mPilotDialogShown = savedInstanceState.getBoolean("mPilotDialogShown");
+        mTimeoutDialogShown = savedInstanceState.getBoolean("mTimeoutDialogShown");
+        mWifiSavedState = savedInstanceState.getBoolean("mWifiSavedState");
+
         mRid = savedInstanceState.getInt("raceid");
         mArrRounds = (ArrayList<Integer>)savedInstanceState.getSerializable("mArrRounds");
         mConnectionStatus = savedInstanceState.getBoolean("connection_status");
@@ -407,7 +416,6 @@ public class RaceActivity extends ListActivity {
         mListViewScrollPos = savedInstanceState.getParcelable("listviewscrollpos");
         if (mListView != null)
             mListView.onRestoreInstanceState(mListViewScrollPos);
-
     }
 	
 	public void onResume(){
@@ -446,6 +454,7 @@ public class RaceActivity extends ListActivity {
 
         if (mPrefWindMeasurement) {
             mWindReadings.setVisibility(View.VISIBLE);
+            setWindReadings(mWindValues);
         } else {
             mWindReadings.setVisibility(View.GONE);
         }
@@ -1404,24 +1413,28 @@ public class RaceActivity extends ListActivity {
                 }
             } else if (intent.hasExtra("com.marktreble.f3ftimer.value.wind_values")) {
 			    if (mPrefWindMeasurement) {
-			        String windvalues = intent.getExtras().getString("com.marktreble.f3ftimer.value.wind_values");
-                    Spannable wordtoSpan = new SpannableString(windvalues);
-                    if (windvalues.contains("direction")) {
-                        wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 3, 12, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 15, 23, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    }
-                    if (windvalues.contains("speed")) {
-                        wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 26, 37, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    }
-                    if (windvalues.contains("no data")) {
-                        wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 0, windvalues.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    }
-                    mWindReadings.setText(wordtoSpan);
+			        mWindValues = intent.getExtras().getString("com.marktreble.f3ftimer.value.wind_values");
+			        setWindReadings(mWindValues);
                 }
 			}
 		}
     };
 
+	public void setWindReadings(String windvalues) {
+        Spannable wordtoSpan = new SpannableString(windvalues);
+        if (windvalues.contains("direction")) {
+            wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 3, 12, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 15, 23, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        if (windvalues.contains("speed")) {
+            wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 26, 37, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        if (windvalues.contains("no data")) {
+            wordtoSpan.setSpan(new ForegroundColorSpan(Color.RED), 0, windvalues.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        mWindReadings.setText(wordtoSpan);
+    }
+	
     public void setRaceRoundTitle(String title) {
         TextView tt = (TextView) findViewById(R.id.race_title);
         tt.setText(String.format("%s %s", getString(R.string.race_round), title));

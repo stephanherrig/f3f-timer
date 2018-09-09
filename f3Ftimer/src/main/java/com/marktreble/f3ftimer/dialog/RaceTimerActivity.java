@@ -15,7 +15,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.Point;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
@@ -27,6 +29,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.WindowManager.LayoutParams;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -45,8 +48,7 @@ public class RaceTimerActivity extends FragmentActivity {
 	public Race mRace;
     public int mRound;
 	public String mNumber;
-	public boolean mWindIllegalDuringFlight = false;
-	private static boolean mWindLegal = true; /* set this once at program start and later only update it via service callbacks */
+	protected boolean mWindLegal = true; /* set this once at program start and later only update it via service callbacks */
 	private RaceTimerFrag mCurrentFragment;
 	private int mCurrentFragmentId;
 	private Context mContext;
@@ -60,7 +62,24 @@ public class RaceTimerActivity extends FragmentActivity {
 
 	public static int WINDOW_STATE_FULL = 0;
 	public static int WINDOW_STATE_MINIMIZED = 1;
-
+	
+	private boolean mPrefWindMeasurement;
+	private String mWindValues = "";
+	protected String mIllegalWindValues = "";
+	protected boolean mFlying = false;
+	
+	protected Handler mHandler = new Handler();
+	protected long mHandlerEndTime;
+	protected long mStart;
+	protected long mLastSecond;
+	
+	protected int mLap = 0;
+	protected long mEstimate = 0;
+	protected Float mFinalTime = -1.0f;
+	
+	protected boolean mAlreadyProgressed = false;
+	protected int mCourseStatus = 0;
+	
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -98,14 +117,25 @@ public class RaceTimerActivity extends FragmentActivity {
 	  		datasource2.open();
 	  		mPilot = datasource2.getPilot(pid, mRace.id);
 	  		datasource2.close();
-	  		
-	  		
 		}
 		
 		if (savedInstanceState != null) {
 
             mCurrentFragmentId = savedInstanceState.getInt("mCurrentFragmentId");
 			mWindowState = savedInstanceState.getInt("mWindowState");
+			mPrefWindMeasurement = savedInstanceState.getBoolean("mPrefWindMeasurement");
+			mWindLegal = savedInstanceState.getBoolean("mWindLegal");
+			mFlying = savedInstanceState.getBoolean("mFlying");
+			mWindValues = savedInstanceState.getString("mWindValues");
+			mIllegalWindValues = savedInstanceState.getString("mIllegalWindValues");
+			mHandlerEndTime = savedInstanceState.getLong("mHandlerEndTime");
+			mStart = savedInstanceState.getLong("mStart");
+			mLastSecond = savedInstanceState.getLong("mLastSecond");
+			mLap = savedInstanceState.getInt("mLap");
+			mEstimate = savedInstanceState.getLong("mEstimate");
+			mFinalTime = savedInstanceState.getFloat("mFinalTime");
+			mAlreadyProgressed = savedInstanceState.getBoolean("mAlreadyProgressed");
+			mCourseStatus = savedInstanceState.getInt("mCourseStatus");
 
 			FragmentManager fm = getSupportFragmentManager();
 			String tag = "racetimerfrag"+Integer.toString(mCurrentFragmentId);
@@ -132,10 +162,10 @@ public class RaceTimerActivity extends FragmentActivity {
 			// when transmitted too late via TcpIoService (TcpIoService might have been triggered by external hardware buttons before
 			// receiving this message).
 			//sendCommand("abort");
-
+			
             RaceTimerFrag1 f;
             f = new RaceTimerFrag1();
-            f.setRetainInstance(true);
+			f.setRetainInstance(true);
 	    	FragmentManager fm = getSupportFragmentManager();
 	    	FragmentTransaction ft = fm.beginTransaction();
 	    	ft.add(R.id.dialog1, f, "racetimerfrag1");
@@ -145,11 +175,16 @@ public class RaceTimerActivity extends FragmentActivity {
 
 			SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(mContext);
 			mWindowState = sharedPref.getInt("pref_window_minized_state", WINDOW_STATE_FULL);
-
+			mPrefWindMeasurement = sharedPref.getBoolean("pref_wind_measurement", false);
         }
 
 		getWindow().addFlags(LayoutParams.FLAG_KEEP_SCREEN_ON);
-
+		Point pt = new Point();
+		getWindowManager().getDefaultDisplay().getSize(pt);
+		WindowManager.LayoutParams lp = getWindow().getAttributes();
+		lp.y += (pt.y / 20);
+		getWindow().setAttributes(lp);
+		
 		mResize = (ImageView)findViewById(R.id.window_resize);
 		mResize.setVisibility(View.VISIBLE);
 		mResize.setOnClickListener(new View.OnClickListener() {
@@ -174,7 +209,6 @@ public class RaceTimerActivity extends FragmentActivity {
 
 			}
 		});
-
 	}
 
 	public void resetLiveStats() {
@@ -207,8 +241,20 @@ public class RaceTimerActivity extends FragmentActivity {
         outState.putInt("round", mRound);
 		outState.putInt("mCurrentFragmentId", mCurrentFragmentId);
 		outState.putInt("mWindowState", mWindowState);
-
-    }
+		outState.putBoolean("mPrefWindMeasurement", mPrefWindMeasurement);
+		outState.putBoolean("mWindLegal", mWindLegal);
+		outState.putBoolean("mFlying", mFlying);
+		outState.putString("mWindValues", mWindValues);
+		outState.putString("mIllegalWindValues", mIllegalWindValues);
+		outState.putLong("mHandlerEndTime", mHandlerEndTime);
+		outState.putLong("mStart", mStart);
+		outState.putLong("mLastSecond", mLastSecond);
+		outState.putInt("mLap", mLap);
+		outState.putLong("mEstimate", mEstimate);
+		outState.putFloat("mFinalTime", mFinalTime);
+		outState.putBoolean("mAlreadyProgressed", mAlreadyProgressed);
+		outState.putInt("mCourseStatus", mCourseStatus);
+	}
 	
 	@Override
 	public void onRestoreInstanceState(Bundle savedInstanceState){
@@ -220,6 +266,19 @@ public class RaceTimerActivity extends FragmentActivity {
 		mRound = savedInstanceState.getInt("round");
 		mCurrentFragmentId = savedInstanceState.getInt("mCurrentFragmentId");
 		mWindowState = savedInstanceState.getInt("mWindowState");
+		mPrefWindMeasurement = savedInstanceState.getBoolean("mPrefWindMeasurement");
+		mWindLegal = savedInstanceState.getBoolean("mWindLegal");
+		mFlying = savedInstanceState.getBoolean("mFlying");
+		mWindValues = savedInstanceState.getString("mWindValues");
+		mIllegalWindValues = savedInstanceState.getString("mIllegalWindValues");
+		mHandlerEndTime = savedInstanceState.getLong("mHandlerEndTime");
+		mStart = savedInstanceState.getLong("mStart");
+		mLastSecond = savedInstanceState.getLong("mLastSecond");
+		mLap = savedInstanceState.getInt("mLap");
+		mEstimate = savedInstanceState.getLong("mEstimate");
+		mFinalTime = savedInstanceState.getFloat("mFinalTime");
+		mAlreadyProgressed = savedInstanceState.getBoolean("mAlreadyProgressed");
+		mCourseStatus = savedInstanceState.getInt("mCourseStatus");
 
 		RaceData datasource = new RaceData(this);
 		datasource.open();
@@ -273,6 +332,7 @@ public class RaceTimerActivity extends FragmentActivity {
     }
 	
 	public void getFragment(Fragment f, int id){
+		mAlreadyProgressed = false;
 		f.setRetainInstance(true);
 		FragmentManager fm = getSupportFragmentManager();
     	FragmentTransaction ft = fm.beginTransaction();
@@ -357,6 +417,7 @@ public class RaceTimerActivity extends FragmentActivity {
 				}
 
 				if (data.equals("off_course")){
+					mCourseStatus = 1;
 					if (mCurrentFragment.getClass().equals(RaceTimerFrag3.class)){
 						((RaceTimerFrag3)mCurrentFragment).setOffCourse();
 					} 
@@ -368,13 +429,14 @@ public class RaceTimerActivity extends FragmentActivity {
 				if (data.equals("on_course")){
 					// Check for the current fragment
 					// Only call next if the current fragment is RaceTimerFrag3
+					mCourseStatus = 2;
 					if (mCurrentFragment.getClass().equals(RaceTimerFrag3.class)){
 						((RaceTimerFrag3)mCurrentFragment).next();
 					}
                     // if it has already moved on to RaceTimeFrag4, then this is a late buzz
                     if (mCurrentFragment.getClass().equals(RaceTimerFrag4.class)){
                         ((RaceTimerFrag4)mCurrentFragment).setOnCourse();
-                    }
+					}
 				}
 
 				if (data.equals("leg_complete")){
@@ -393,10 +455,10 @@ public class RaceTimerActivity extends FragmentActivity {
 					Float time = extras.getFloat("com.marktreble.f3ftimer.time");
 					Float fastestFlightTime = extras.getFloat("com.marktreble.f3ftimer.fastestFlightTime");
 					String fastestFlightPilot = extras.getString("com.marktreble.f3ftimer.fastestFlightPilot");
-					if (mWindIllegalDuringFlight) {
-						// show wind warning if it was illegal during flight
-						(mCurrentFragment).setWindWarning(true);
-					}
+					mFinalTime = time;
+					mCourseStatus = 3;
+					mLap = 0;
+					mEstimate = 0;
                     if (mCurrentFragment.getClass().equals(RaceTimerFrag4.class)) {
                         ((RaceTimerFrag4) mCurrentFragment).setFinal(time, fastestFlightTime, fastestFlightPilot);
 	
@@ -414,25 +476,17 @@ public class RaceTimerActivity extends FragmentActivity {
 
 			    	//mActivity.setResult(RaceActivity.RESULT_OK);
 			    	//mActivity.finish();
-					
 				}
 				
 				if (data.equals("wind_illegal")){
 					mWindLegal = false;
-					mWindIllegalDuringFlight = true;
-					(mCurrentFragment).setWindWarning(true);
 				}
 
 				if (data.equals("wind_legal")){
 					mWindLegal = true;
-					(mCurrentFragment).setWindWarning(false);
 				}
 
 				if (data.equals("start_pressed")){
-					if (mCurrentFragment.getClass().equals(RaceTimerFrag2.class)) {
-						// reset illegal wind state before model is launched
-						mWindIllegalDuringFlight = !mWindLegal;
-					}
 					(mCurrentFragment).startPressed();
 				}
 				
@@ -465,7 +519,30 @@ public class RaceTimerActivity extends FragmentActivity {
                     Integer penalty = extras.getInt("com.marktreble.f3ftimer.penalty");
                     incPenalty(pilot_id, penalty);
                 }
-            }
+            } else if (intent.hasExtra("com.marktreble.f3ftimer.value.wind_values")) {
+				if (mPrefWindMeasurement) {
+					mWindValues = intent.getExtras().getString("com.marktreble.f3ftimer.value.wind_values");
+					if (!mFlying) {
+						if (mWindValues.contains("illegal")) {
+							mWindLegal = false;
+							mIllegalWindValues = mWindValues;
+							mCurrentFragment.setWindWarning(mIllegalWindValues.contains("illegal"), mIllegalWindValues);
+						} else {
+							mWindLegal = true;
+							mIllegalWindValues = "";
+							mCurrentFragment.setWindWarning(mIllegalWindValues.contains("illegal"), mIllegalWindValues);
+						}
+					} else {
+						if (mWindValues.contains("illegal")) {
+							mWindLegal = false;
+							if (mIllegalWindValues == "") {
+								mIllegalWindValues = mWindValues;
+								mCurrentFragment.setWindWarning(mIllegalWindValues.contains("illegal"), mIllegalWindValues);
+							}
+						}
+					}
+				}
+			}
 		}
 	};
     

@@ -5,28 +5,18 @@
  */
 package com.marktreble.f3ftimer.dialog;
 
-import com.marktreble.f3ftimer.R;
-import com.marktreble.f3ftimer.racemanager.RaceActivity;
-
 import android.content.Intent;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.os.Bundle;
 import android.widget.TextView;
 
-public class RaceTimerFrag1 extends RaceTimerFrag {
+import com.marktreble.f3ftimer.R;
+import com.marktreble.f3ftimer.racemanager.RaceActivity;
 
-	
-	public RaceTimerFrag1(){
-		
-	}
-	
-	@Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
+public class RaceTimerFrag1 extends RaceTimerFrag {
 
 	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -60,20 +50,21 @@ public class RaceTimerFrag1 extends RaceTimerFrag {
 		ab.setOnClickListener(new View.OnClickListener() {
 	        @Override
 	        public void onClick(View v) {
-	        	RaceTimerActivity a = (RaceTimerActivity)getActivity();
-	        	a.sendCommand("abort");
+	        	mRaceTimerActivity.sendCommand("abort");
 
-				a.setResult(RaceActivity.RESULT_ABORTED, null);
-	        	a.finish();
+				mRaceTimerActivity.setResult(RaceActivity.RESULT_ABORTED, null);
+	        	mRaceTimerActivity.finish();
 	            
 				Intent i = new Intent("com.marktreble.f3ftimer.onLiveUpdate");
 				i.putExtra("com.marktreble.f3ftimer.value.state", 0);
-				a.sendBroadcast(i);
+				mRaceTimerActivity.sendBroadcast(i);
 	        }
 	    });
 
 		TextView status = (TextView) mView.findViewById(R.id.status);
 		status.setVisibility(View.GONE);
+		
+		setWindWarning(false, "");
 
 		super.setPilotName();
 		
@@ -81,40 +72,39 @@ public class RaceTimerFrag1 extends RaceTimerFrag {
 	}
 	
 	public void next(){
-    	RaceTimerActivity a = (RaceTimerActivity)getActivity();
-    	    	
-    	a.sendCommand("working_time");
+    	mRaceTimerActivity.sendCommand("working_time");
 
 		Intent i = new Intent("com.marktreble.f3ftimer.onUpdateFromUI");
 		i.putExtra("com.marktreble.f3ftimer.ui_callback", "working_time_started");
-		a.sendBroadcast(i);
+		mRaceTimerActivity.sendBroadcast(i);
 
 		i = new Intent("com.marktreble.f3ftimer.onLiveUpdate");
 		i.putExtra("com.marktreble.f3ftimer.value.state", 2);
 		i.putExtra("com.marktreble.f3ftimer.value.workingTime", 0.0f);
-		a.sendBroadcast(i);
+		mRaceTimerActivity.sendBroadcast(i);
 
-    	a.getFragment(new RaceTimerFrag2(),2);
+    	mRaceTimerActivity.getFragment(new RaceTimerFrag2(),2);
 	}
 	
 	public void model_launched(){
-    	RaceTimerActivity a = (RaceTimerActivity)getActivity();
-    	    	
     	// Send model launched to server
-    	 a.sendCommand("launch");
+    	 mRaceTimerActivity.sendCommand("launch");
     	 		
 		/* send to TcpIoService for UI tracking */
 		Intent i = new Intent("com.marktreble.f3ftimer.onUpdateFromUI");
 		i.putExtra("com.marktreble.f3ftimer.ui_callback", "model_launched");
-		a.sendBroadcast(i);
+		mRaceTimerActivity.sendBroadcast(i);
 
 		/* send to ResultsServer Live Listener */
 		i = new Intent("com.marktreble.f3ftimer.onLiveUpdate");
 		i.putExtra("com.marktreble.f3ftimer.value.state", 3);
-		a.sendBroadcast(i);
+		mRaceTimerActivity.sendBroadcast(i);
+		
+		mRaceTimerActivity.mCourseStatus = 0;
+		mRaceTimerActivity.mFinalTime = -1.0f;
+		mRaceTimerActivity.mFlying = true;
 
-    	a.getFragment(new RaceTimerFrag3(),3);
-
+    	mRaceTimerActivity.getFragment(new RaceTimerFrag3(),3);
 	}
 	
 	public void startPressed(){

@@ -15,16 +15,6 @@ import com.marktreble.f3ftimer.R;
 import com.marktreble.f3ftimer.racemanager.RaceActivity;
 
 public class RaceTimerFragNextRound extends RaceTimerFrag {
-	
-	public RaceTimerFragNextRound(){
-		
-	}
-	
-	@Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-    }
 
 	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
