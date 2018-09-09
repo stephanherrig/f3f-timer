@@ -493,7 +493,7 @@ public class Driver implements TTS.onInitListenerProxy {
 						Resources res = Languages.useLanguage(mContext, mPilotLang);
 						String text = res.getString(R.string.next_pilot);
 						if (mSpeechPilotNumberOn)  {
-							text = String.format("%s %s %d , ", text, res.getString(R.string.snd_pilot_id), pilot.pilot_id);
+							text = String.format("%s %s %d , ", text, res.getString(R.string.snd_pilot_id), pilot.id);
 						}
 						text = String.format("%s %s %s", text, pilot.firstname, pilot.lastname);
 						Languages.useLanguage(mContext, mDefaultLang);
