@@ -78,8 +78,8 @@ public class TcpIoService extends Service implements DriverInterface {
 	private static boolean timeReceived;
 
 	private static boolean mReceivedAbort = false;
-    
-    private static int mDNFButtonCounter = 0;
+	
+	private static long mDNFButtonTimestamp = 0;
 
 	private static float mSlopeOrientation = 0.0f;
 	private static String mF3ftimerServerIp = DEFAULT_F3FTIMER_SERVER_IP;
@@ -510,15 +510,13 @@ public class TcpIoService extends Service implements DriverInterface {
 									break;
 								case FT_CANCEL_ZERO:
                                     Log.d(TAG, "received: \"" + strbuf + "\"");
-                                    mDNFButtonCounter++;
-									Log.d(TAG, "mDNFButtonCounter " + mDNFButtonCounter);
-                                    if (mDNFButtonCounter > 1) {
+                                    if ((System.currentTimeMillis() - mDNFButtonTimestamp) < 2000) {
                                         Log.d(TAG, "scoreZeroAndCancelDialogAndNextPilot");
                                         scoreZeroAndCancelDialogAndNextPilot();
                                         mReceivedAbort = true;
-                                        mDNFButtonCounter = 0;
                                         sendAbort();
-                                    }
+									}
+									mDNFButtonTimestamp = System.currentTimeMillis();
 									break;
 								case FT_PENALTY:
 									Log.d(TAG, "received: \"" + strbuf + "\"");
