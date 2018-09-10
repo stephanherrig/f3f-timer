@@ -179,8 +179,8 @@ public class RaceActivity extends ListActivity {
             super.onPostExecute(ip);
             TextView resultsServerIpView = findViewById(R.id.results_ip);
             if (resultsServerIpView != null) {
-                mResultsServerIp = ip;
-                resultsServerIpView.setText(String.format("%s:8080", ip));
+                mResultsServerIp = String.format("%s:8080", ip);
+                resultsServerIpView.setText(mResultsServerIp);
             }
         }
     }
