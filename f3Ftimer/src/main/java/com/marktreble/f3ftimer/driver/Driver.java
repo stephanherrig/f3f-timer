@@ -81,7 +81,7 @@ public class Driver implements TTS.onInitListenerProxy {
 	private TTS mTts;
 	private boolean mSetFullVolume;
 
-	public Handler mHandler = new Handler();
+	public Handler mHandler;
 	
 	private String mCalled;
 	private boolean mOmitOffCourse;
@@ -108,6 +108,7 @@ public class Driver implements TTS.onInitListenerProxy {
 
 	public Driver(Context context){
 		mContext = context;
+		mHandler = new Handler();
 	}
 	
 	public void start(Intent intent){
@@ -118,7 +119,6 @@ public class Driver implements TTS.onInitListenerProxy {
 		}
 		// Get the race id
 		if (intent.hasExtra("com.marktreble.f3ftimer.race_id")){
-
 			Bundle extras = intent.getExtras();
 			mRid = extras.getInt("com.marktreble.f3ftimer.race_id", 0);
 			mWindMeasurement = extras.getBoolean("pref_wind_measurement", false);
@@ -493,7 +493,7 @@ public class Driver implements TTS.onInitListenerProxy {
 						Resources res = Languages.useLanguage(mContext, mPilotLang);
 						String text = res.getString(R.string.next_pilot);
 						if (mSpeechPilotNumberOn)  {
-							text = String.format("%s %s %d , ", text, res.getString(R.string.snd_pilot_id), pilot.pilot_id);
+							text = String.format("%s %s %d , ", text, res.getString(R.string.snd_pilot_id), pilot.id);
 						}
 						text = String.format("%s %s %s", text, pilot.firstname, pilot.lastname);
 						Languages.useLanguage(mContext, mDefaultLang);

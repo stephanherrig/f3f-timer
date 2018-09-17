@@ -218,8 +218,6 @@ public class RaceActivity extends ListActivity {
         mRnd = mRace.round;
   		setRound();
 
-        getPreferences();
-
         mListView = getListView();
         registerForContextMenu(mListView);
         
@@ -241,8 +239,6 @@ public class RaceActivity extends ListActivity {
         registerReceiver(mBatInfoReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
 
         if (savedInstanceState == null) {
-            // Start Results server
-            startServers();
     
             mInputSource = "";
             mInputSourceDevice = "";
@@ -253,7 +249,18 @@ public class RaceActivity extends ListActivity {
             mWindValues ="";
             mListViewScrollPos = null;
             mResultsServerIp = "";
-            
+    
+            SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+            mInputSource = sharedPref.getString("pref_input_src", getString(R.string.Demo));
+            mInputSourceDevice = sharedPref.getString("pref_input_src_device", "");
+            mPrefResults = sharedPref.getBoolean("pref_results_server", false);
+            mPrefResultsDisplay = sharedPref.getBoolean("pref_results_display", false);
+            mPrefExternalDisplay = sharedPref.getString("pref_external_display", "");
+            mPrefWindMeasurement = sharedPref.getBoolean("pref_wind_measurement", false);
+    
+            // Start Results server
+            startServers();
+
             mFetchIpAsyncTask = new FetchIPAsyncTask();
             mRaceTitleHandler = new Handler();
             mScrollHandler = new Handler();
@@ -314,7 +321,6 @@ public class RaceActivity extends ListActivity {
                 mMenuShown = isVisible;
             }
         });
-
     }
 	
     @Override
@@ -339,10 +345,7 @@ public class RaceActivity extends ListActivity {
     }
 
 	public void onBackPressed (){
-        Log.d("RaceActivity", "onBackPressed");
-		/* Don't destroy the servers when back is pressed.
-		   Stop them when a race is selected, so that results can still be viewed in the meantime, minimizing downtime. */
-		//stopServers();
+        stopServers();
         mFetchIpAsyncTask.cancel(true);
         mRaceTitleHandler.removeCallbacks(mCheckConnectionRunnable);
         mScrollHandler.removeCallbacks(mScrollToTopRunnable);
@@ -433,12 +436,14 @@ public class RaceActivity extends ListActivity {
 	public void stopServers(){
 		// Stop all Servers
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-        if (RaceResultsService.stop(this)){
+        /* Don't destroy the servers when back is pressed.
+		   Stop them when a race is selected, so that results can still be viewed in the meantime, minimizing downtime. */
+        //if (RaceResultsService.stop(this)){
             boolean pref_wifi_hotspot = sharedPref.getBoolean("pref_wifi_hotspot", false);
             if (pref_wifi_hotspot && Wifi.canEnableWifiHotspot(this) && !mInputSource.equals(getString(R.string.TCP_IO))){
 				Wifi.disableWifiHotspot(this, mWifiSavedState);
 			}
-       	}
+       	//}
 
         RaceResultsDisplayService.stop(this);
 
@@ -519,7 +524,6 @@ public class RaceActivity extends ListActivity {
         boolean sPrefResults = mPrefResults;
         boolean sPrefResultsDisplay = mPrefResultsDisplay;
         String sPrefExternalDisplay = mPrefExternalDisplay;
-     	getPreferences();
 
      	if (!sInputSource.equals(mInputSource) 	                    // Input src changed
      		|| sPrefResults!=mPrefResults 		                    // Results server toggled
@@ -562,17 +566,6 @@ public class RaceActivity extends ListActivity {
 	
 	public void onPause(){
         super.onPause();
-	}
-	
-	private void getPreferences(){
-
-     	SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-        mInputSource = sharedPref.getString("pref_input_src", getString(R.string.Demo));
-        mInputSourceDevice = sharedPref.getString("pref_input_src_device", "");
-        mPrefResults = sharedPref.getBoolean("pref_results_server", false);
-        mPrefResultsDisplay = sharedPref.getBoolean("pref_results_display", false);
-        mPrefExternalDisplay = sharedPref.getString("pref_external_display", "");
-        mPrefWindMeasurement = sharedPref.getBoolean("pref_wind_measurement", false);
 	}
 	
 	private void setRound() {
