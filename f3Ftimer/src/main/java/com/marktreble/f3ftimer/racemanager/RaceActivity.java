@@ -627,12 +627,12 @@ public class RaceActivity extends ListActivity {
 			if (requestCode == RaceActivity.DLG_TIMER){
 				// Response from completed run
 
-				if (mNextPilot != null){
-					// Bring up next pilot's dialog
-                    mScrollHandler.postDelayed(mScrollToNextPilotRunnable, 100);
-
+                // Bring up next pilot's dialog
+                scrollToNextPilot();
+                    
+                if (mNextPilot != null){
                     if (!mFirstInGroup.get(mNextPilot.position)) {
-                        mNextPilotHandler.postDelayed(mNextPilotRunnable, 600);
+                        showNextPilotDelayed(600);
                     }
                 } else {
 					// Bring up the next round dialog
@@ -660,13 +660,10 @@ public class RaceActivity extends ListActivity {
 			if (requestCode == RaceActivity.DLG_TIMEOUT){
 				// Send command to Service to say that timeout has been resumed
 				sendCommand("timeout_resumed");
-
+                
                 // Resume timeout - start next pilot's dialog
-				if (mNextPilot != null){
-                    mScrollHandler.postDelayed(mScrollToNextPilotRunnable, 100);
-
-                    mNextPilotHandler.postDelayed(mNextPilotRunnable, 600);
-				}
+                scrollToNextPilot();
+                showNextPilotDelayed(600);
 			}
 			
 			if (requestCode == RaceActivity.DLG_PILOT_EDIT){
@@ -1211,14 +1208,24 @@ public class RaceActivity extends ListActivity {
 		}
 	}
 
+	private void scrollToTop() {
+        if (mNextPilot != null && mScrollHandler != null && mScrollToTopRunnable != null) {
+            mScrollHandler.postDelayed(mScrollToTopRunnable, 100);
+        }
+    }
+    
+    private void scrollToNextPilot() {
+        if (mNextPilot != null && mScrollHandler != null && mScrollToNextPilotRunnable != null) {
+            mScrollHandler.postDelayed(mScrollToNextPilotRunnable, 100);
+        }
+    }
+	
     private void showPilotDialog(int round, int pilot_id, String bib_no){
         if (mPilotDialogShown) return;
         if (mTimeoutDialogShown) return;
         if (mMenuShown) return;
-
-        if (mNextPilot != null) {
-            mScrollHandler.postDelayed(mScrollToNextPilotRunnable, 100);
-        }
+    
+        scrollToNextPilot();
         
         Intent intent = new Intent(this, RaceTimerActivity.class);
         intent.putExtra("pilot_id", pilot_id);
@@ -1228,8 +1235,14 @@ public class RaceActivity extends ListActivity {
         startActivityForResult(intent,DLG_TIMER);
         mPilotDialogShown = true;
     }
-
-	private void showNextPilot(){
+    
+    private void showNextPilotDelayed(long delay) {
+        if (mNextPilotHandler != null && mNextPilotRunnable != null) {
+            mNextPilotHandler.postDelayed(mNextPilotRunnable, delay);
+        }
+    }
+    
+    private void showNextPilot(){
         if (mNextPilot.position != null) {
             showPilotDialog(mNextPilot.round, mNextPilot.id, mNextPilot.number);
         } else {
@@ -1324,10 +1337,7 @@ public class RaceActivity extends ListActivity {
                     Pilot p = datasource.getPilot(pilot_id, mRid);
                     datasource.close();
                     scorePilotZero(p);
-                    if (mNextPilot != null) {
-                        // Scroll to next pilot
-                        mScrollHandler.postDelayed(mScrollToNextPilotRunnable, 100);
-                    }
+                    scrollToNextPilot();
                 }
 
 				if (data.equals("start_pressed")){
@@ -1577,12 +1587,11 @@ public class RaceActivity extends ListActivity {
         invalidateOptionsMenu(); // Refresh menu so that next round becomes active
 
         setRaceRoundTitle(Integer.toString(mRace.round));
-
-        mScrollHandler.postDelayed(mScrollToTopRunnable, 100);
+    
+        scrollToTop();
 
         // Bring up next pilot's dialog
-        mNextPilotHandler.postDelayed(mNextPilotRunnable, 1000);
-		
+        showNextPilotDelayed(1000);
 	}
 
 	public void scrubRound(){

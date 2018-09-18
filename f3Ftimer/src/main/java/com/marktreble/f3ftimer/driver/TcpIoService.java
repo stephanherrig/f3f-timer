@@ -162,6 +162,23 @@ public class TcpIoService extends Service implements DriverInterface {
 							}
 
 							mSocketLock.lock();
+							if (instance.mmSocket != null) {
+								try {
+									if (!instance.mmSocket.isOutputShutdown()) {
+										instance.mmSocket.getOutputStream().flush();
+										instance.mmSocket.shutdownOutput();
+									}
+									if (!instance.mmSocket.isInputShutdown()) {
+										instance.mmSocket.shutdownInput();
+									}
+									if (!instance.mmSocket.isClosed()) {
+										instance.mmSocket.close();
+										instance.mmSocket = null;
+									}
+								} catch (IOException e1) {
+									e1.printStackTrace();
+								}
+							}
 							instance.mmSocket = new Socket();
 							instance.mmSocket.setReuseAddress(true);
 							instance.mmSocket.setTcpNoDelay(true);
@@ -205,10 +222,10 @@ public class TcpIoService extends Service implements DriverInterface {
 					} catch (InterruptedException e) {
 						// nothing to do
 					} finally {
-						if (mSocketLock.isLocked()) {
+						if (mSocketLock.isHeldByCurrentThread()) {
 							mSocketLock.unlock();
 						}
-						if (mReinstateLock.isLocked()) {
+						if (mReinstateLock.isHeldByCurrentThread()) {
 							mReinstateLock.unlock();
 						}
 					}
@@ -805,53 +822,6 @@ public class TcpIoService extends Service implements DriverInterface {
 	private void closeSocketAndDisconnect(boolean quitConnectThread) {
 		if (mReinstateLock.tryLock()) {
 			if (instance != null) {
-				if (instance.aliveThread != null) {
-					instance.aliveThread.quit();
-					try {
-						instance.aliveThread.join();
-						instance.aliveThread = null;
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-				if (instance.sendThread != null) {
-					instance.sendThread.quit();
-					try {
-						instance.sendThread.join();
-						instance.sendThread = null;
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-				if (instance.listenThread != null) {
-					instance.listenThread.quit();
-					try {
-						instance.listenThread.join();
-						instance.listenThread = null;
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-				if (mSocketLock.tryLock()) {
-					if (instance.mmSocket != null) {
-						try {
-							if (!instance.mmSocket.isOutputShutdown()) {
-								instance.mmSocket.getOutputStream().flush();
-								instance.mmSocket.shutdownOutput();
-							}
-							if (!instance.mmSocket.isInputShutdown()) {
-								instance.mmSocket.shutdownInput();
-							}
-							if (!instance.mmSocket.isClosed()) {
-								instance.mmSocket.close();
-								instance.mmSocket = null;
-							}
-						} catch (IOException e1) {
-							e1.printStackTrace();
-						}
-					}
-					mSocketLock.unlock();
-				}
 				if (instance.connectThread != null) {
 					if (!quitConnectThread) {
 						instance.connectThread.reconnect();
