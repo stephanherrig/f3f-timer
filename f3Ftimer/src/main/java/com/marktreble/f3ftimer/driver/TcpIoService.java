@@ -54,8 +54,7 @@ public class TcpIoService extends Service implements DriverInterface {
 	
 	private static final DecimalFormat NUMBER_FORMATTER = new DecimalFormat("+0.00;-0.00");
 	
-	private static final ReentrantLock mSocketLock = new ReentrantLock();
-	private static final ReentrantLock mReinstateLock = new ReentrantLock();
+	private static final ReentrantLock mThreadLock = new ReentrantLock();
 
 	private static TcpIoService instance;
 	
@@ -131,7 +130,7 @@ public class TcpIoService extends Service implements DriverInterface {
 				instance.mConnected = false;
 				instance.driverDisconnected();
 				try {
-					mReinstateLock.lock();
+					mThreadLock.lock();
 					// Connect the device through the socket. This will block
 					// until it succeeds or throws an exception
 					InetSocketAddress rpiSocketAdr = new InetSocketAddress(instance.mF3ftimerServerIp, F3FTIMER_SERVER_PORT);
@@ -161,7 +160,6 @@ public class TcpIoService extends Service implements DriverInterface {
 							Log.d(TAG, "joined listenThread");
 						}
 
-						mSocketLock.lock();
 						if (mmSocket != null) {
 							try {
 								if (!mmSocket.isOutputShutdown()) {
@@ -181,10 +179,9 @@ public class TcpIoService extends Service implements DriverInterface {
 								e1.printStackTrace();
 							}
 						}
-						
 						/* now wait until the peer socket times out */
 						sleep(RECONNECT_INTERVAL_TIME);
-						
+						/* reinitialize the socket */
 						mmSocket = new Socket();
 						mmSocket.setReuseAddress(true);
 						mmSocket.setTcpNoDelay(true);
@@ -198,7 +195,6 @@ public class TcpIoService extends Service implements DriverInterface {
 						mmInStream = mmSocket.getInputStream();
 						mmOutStream = mmSocket.getOutputStream();
 						Log.d(TAG, "Socket created");
-						mSocketLock.unlock();
 
 						Log.d(TAG, "starting sendThread");
 						sendThread = new SendThread();
@@ -217,7 +213,7 @@ public class TcpIoService extends Service implements DriverInterface {
 						instance.driverConnected();
 						
 						Log.i(TAG, "connected to " + rpiSocketAdr.getHostName() + ":" + rpiSocketAdr.getPort());
-						mReinstateLock.unlock();
+						mThreadLock.unlock();
 
 						while (instance != null && connectThread != null && connectThread.isRunning()) {
 							sleep(1000);
@@ -228,11 +224,8 @@ public class TcpIoService extends Service implements DriverInterface {
 				} catch (InterruptedException e) {
 					// nothing to do
 				} finally {
-					if (mSocketLock.isHeldByCurrentThread()) {
-						mSocketLock.unlock();
-					}
-					if (mReinstateLock.isHeldByCurrentThread()) {
-						mReinstateLock.unlock();
+					if (mThreadLock.isHeldByCurrentThread()) {
+						mThreadLock.unlock();
 					}
 				}
 			}
@@ -824,7 +817,7 @@ public class TcpIoService extends Service implements DriverInterface {
 	}
 
 	private void closeSocketAndDisconnect(boolean quitConnectThread) {
-		if (mReinstateLock.tryLock()) {
+		if (mThreadLock.tryLock()) {
 			if (instance != null) {
 				if (connectThread != null) {
 					if (!quitConnectThread) {
@@ -842,7 +835,7 @@ public class TcpIoService extends Service implements DriverInterface {
 					}
 				}
 			}
-			mReinstateLock.unlock();
+			mThreadLock.unlock();
 		}
 	}
 
