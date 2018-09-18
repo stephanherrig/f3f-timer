@@ -1215,6 +1215,11 @@ public class RaceActivity extends ListActivity {
         if (mPilotDialogShown) return;
         if (mTimeoutDialogShown) return;
         if (mMenuShown) return;
+
+        if (mNextPilot != null) {
+            mScrollHandler.postDelayed(mScrollToNextPilotRunnable, 100);
+        }
+        
         Intent intent = new Intent(this, RaceTimerActivity.class);
         intent.putExtra("pilot_id", pilot_id);
         intent.putExtra("race_id", mRid);

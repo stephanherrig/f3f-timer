@@ -46,6 +46,7 @@ public class TcpIoService extends Service implements DriverInterface {
 	private static final String FT_TIME = "T";
 	private static final String FT_LEGS = "L";
 	private static final String FT_SPEECH = "X";
+	private static final String FT_ALIVE = ".";
 
 	private static final String ICN_CONN = "on_rasp";
 	private static final String ICN_DISCONN = "off_rasp";
@@ -77,6 +78,7 @@ public class TcpIoService extends Service implements DriverInterface {
 	private boolean timeAlreadyReceived;
 
 	private long mDNFButtonTimestamp = 0;
+	private long mLastReceiveTimestamp = 0;
 
 	private float mSlopeOrientation = 0.0f;
 	private String mF3ftimerServerIp = DEFAULT_F3FTIMER_SERVER_IP;
@@ -91,6 +93,7 @@ public class TcpIoService extends Service implements DriverInterface {
 	private ConnectThread connectThread;
 	private ListenThread listenThread;
 	private SendThread sendThread;
+	private AliveThread aliveThread;
 	
 
 	private class ConnectThread extends Thread {
@@ -134,20 +137,14 @@ public class TcpIoService extends Service implements DriverInterface {
 						InetSocketAddress rpiSocketAdr = new InetSocketAddress(instance.mF3ftimerServerIp, F3FTIMER_SERVER_PORT);
 						Log.i(TAG, "connecting to " + rpiSocketAdr.getHostName() + ":" + rpiSocketAdr.getPort());
 						try {
-							mSocketLock.lock();
-							instance.mmSocket = new Socket();
-							instance.mmSocket.setReuseAddress(true);
-							instance.mmSocket.setTcpNoDelay(true);
-							instance.mmSocket.setSoLinger(false, 0);
-							instance.mmSocket.setSoTimeout(1000);
-							//mmSocket.setKeepAlive(true);
-							instance.mmSocket.connect(rpiSocketAdr, 5000);
-							// Do work to manage the connection (in a separate thread)
-							instance.mmInStream = instance.mmSocket.getInputStream();
-							instance.mmOutStream = instance.mmSocket.getOutputStream();
-							Log.d(TAG, "Socket created");
-							mSocketLock.unlock();
-							
+							if (instance.aliveThread != null) {
+								Log.d(TAG, "joining aliveThread");
+								instance.aliveThread.quit();
+								instance.aliveThread.join();
+								instance.aliveThread = null;
+								Log.d(TAG, "joined aliveThread");
+							}
+
 							if (instance.sendThread != null) {
 								Log.d(TAG, "joining sendThread");
 								instance.sendThread.quit();
@@ -155,9 +152,6 @@ public class TcpIoService extends Service implements DriverInterface {
 								instance.sendThread = null;
 								Log.d(TAG, "joined sendThread");
 							}
-							Log.d(TAG, "starting sendThread");
-							instance.sendThread = new SendThread();
-							instance.sendThread.start();
 							
 							if (instance.listenThread != null) {
 								Log.d(TAG, "joining listenThread");
@@ -166,9 +160,34 @@ public class TcpIoService extends Service implements DriverInterface {
 								instance.listenThread = null;
 								Log.d(TAG, "joined listenThread");
 							}
+
+							mSocketLock.lock();
+							instance.mmSocket = new Socket();
+							instance.mmSocket.setReuseAddress(true);
+							instance.mmSocket.setTcpNoDelay(true);
+							instance.mmSocket.setSoLinger(false, 0);
+							instance.mmSocket.setSoTimeout(1000);
+							instance.mmSocket.setSendBufferSize(64);
+							instance.mmSocket.setReceiveBufferSize(64);
+							//mmSocket.setKeepAlive(true);
+							instance.mmSocket.connect(rpiSocketAdr, 5000);
+							// Do work to manage the connection (in a separate thread)
+							instance.mmInStream = instance.mmSocket.getInputStream();
+							instance.mmOutStream = instance.mmSocket.getOutputStream();
+							Log.d(TAG, "Socket created");
+							mSocketLock.unlock();
+
+							Log.d(TAG, "starting sendThread");
+							instance.sendThread = new SendThread();
+							instance.sendThread.start();
+							
 							Log.d(TAG, "starting listenThread");
 							instance.listenThread = new ListenThread();
 							instance.listenThread.start();
+							
+							Log.d(TAG, "starting aliveThread");
+							instance.aliveThread = new AliveThread();
+							instance.aliveThread.start();
 							
 							reconnecting = false;
 							instance.mConnected = true;
@@ -185,6 +204,13 @@ public class TcpIoService extends Service implements DriverInterface {
 						}
 					} catch (InterruptedException e) {
 						// nothing to do
+					} finally {
+						if (mSocketLock.isLocked()) {
+							mSocketLock.unlock();
+						}
+						if (mReinstateLock.isLocked()) {
+							mReinstateLock.unlock();
+						}
 					}
 					try {
 						sleep(1000);
@@ -287,6 +313,41 @@ public class TcpIoService extends Service implements DriverInterface {
 		}
 	}
 	
+	private class AliveThread extends Thread {
+		private boolean quit = false;
+		
+		public synchronized void quit() {
+			if (!quit) {
+				quit = true;
+				interrupt();
+				Log.d(TAG, "AliveThread quit");
+			}
+		}
+		
+		public boolean isRunning() {
+			return !quit;
+		}
+		
+		@Override
+		public void run() {
+			Thread.currentThread().setName("AliveThread" + this.getId());
+			Looper.prepare();
+			
+			while (instance != null && instance.aliveThread != null && instance.aliveThread.isRunning()) {
+				try {
+					Thread.sleep(1000);
+					if (instance.mLastReceiveTimestamp < System.currentTimeMillis() - 5000) {
+						Log.d(TAG, "ListenThread stalled ... reconnect");
+						instance.connectThread.reconnect();
+					}
+				}
+				catch (InterruptedException e) {
+					// nothing to do
+				}
+			}
+		}
+	}
+
 	private class UIBroadcastReceiver extends BroadcastReceiver {
 		@Override
 		public void onReceive(Context context, Intent intent) {
@@ -355,6 +416,7 @@ public class TcpIoService extends Service implements DriverInterface {
 			instance.mTurnB = false;
 			instance.mLeg = 0;
 			instance.mDNFButtonTimestamp = 0;
+			instance.mLastReceiveTimestamp = System.currentTimeMillis();
 			
 			instance.mDriver = new Driver(this);
 			
@@ -418,6 +480,7 @@ public class TcpIoService extends Service implements DriverInterface {
             instance.connectThread.interrupt();
             try {
                 instance.connectThread.join();
+				instance.connectThread = null;
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -519,9 +582,8 @@ public class TcpIoService extends Service implements DriverInterface {
 			instance.sendThread.sendCmd(FT_SPEECH + lang.substring(0, 2) + text + " ");
 		}
 	}
-
+	
 	private void listen() {
-		// Listen
 		byte[] buffer = new byte[1024];  // 1K buffer store for the stream
 		int bufferLength; // bytes returned from read()
 		String wind_angle_str;
@@ -538,6 +600,7 @@ public class TcpIoService extends Service implements DriverInterface {
 				// Read from the InputStream
 				bufferLength = instance.mmInStream.read(buffer);
 				if (bufferLength > 0) {
+					instance.mLastReceiveTimestamp = currentTime;
 					byte[] data = new byte[bufferLength];
 					System.arraycopy(buffer, 0, data, 0, bufferLength);
 					String strbuf = new String(data, 0, data.length).replaceAll("[^\\x20-\\x7F]", "").trim();
@@ -688,12 +751,10 @@ public class TcpIoService extends Service implements DriverInterface {
 					}
 				}
 			}
+			
+			
 			if (instance != null && instance.listenThread != null && instance.listenThread.isRunning()) {
 				try {
-					if (instance.sendThread != null && instance.sendThread.isRunning()) {
-						instance.sendThread.sendCmd(""); // send alive
-					}
-					
 					// now update wind data
 					if (instance.mDriver != null) {
 						if (instance.mDriver.mWindMeasurement) {
@@ -744,6 +805,15 @@ public class TcpIoService extends Service implements DriverInterface {
 	private void closeSocketAndDisconnect(boolean quitConnectThread) {
 		if (mReinstateLock.tryLock()) {
 			if (instance != null) {
+				if (instance.aliveThread != null) {
+					instance.aliveThread.quit();
+					try {
+						instance.aliveThread.join();
+						instance.aliveThread = null;
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
 				if (instance.sendThread != null) {
 					instance.sendThread.quit();
 					try {
