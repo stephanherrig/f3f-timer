@@ -353,9 +353,11 @@ public class TcpIoService extends Service implements DriverInterface {
 			while (instance != null && instance.aliveThread != null && instance.aliveThread.isRunning()) {
 				try {
 					Thread.sleep(1000);
-					if (instance.mLastReceiveTimestamp < System.currentTimeMillis() - 5000) {
-						Log.d(TAG, "ListenThread stalled ... reconnect");
-						instance.connectThread.reconnect();
+					if (instance != null) {
+						if (instance.mLastReceiveTimestamp < System.currentTimeMillis() - 5000) {
+							Log.d(TAG, "ListenThread stalled ... reconnect");
+							instance.connectThread.reconnect();
+						}
 					}
 				}
 				catch (InterruptedException e) {
@@ -703,52 +705,54 @@ public class TcpIoService extends Service implements DriverInterface {
 									instance.mTurnB = false;
 									break;
 								case FT_WIND:
-									if (instance.mDriver.mWindMeasurement) {
-										Log.d(TAG, "received: \"" + strbuf + "\"");
-										try {
-											wind_angle_str = str.substring(str.indexOf(",") + 1, str.lastIndexOf(","));
-											wind_speed_str = str.substring(str.lastIndexOf(",") + 1, str.length());
-											/* decode wind measurement */
-											wind_angle_absolute = (Float.parseFloat(wind_angle_str)) % 360;
-											wind_angle_relative = wind_angle_absolute - instance.mSlopeOrientation;
-											if (wind_angle_absolute > 180 + instance.mSlopeOrientation) {
-												wind_angle_relative -= 360;
+									if (instance.mDriver != null) {
+										if (instance.mDriver.mWindMeasurement) {
+											Log.d(TAG, "received: \"" + strbuf + "\"");
+											try {
+												wind_angle_str = str.substring(str.indexOf(",") + 1, str.lastIndexOf(","));
+												wind_speed_str = str.substring(str.lastIndexOf(",") + 1, str.length());
+												/* decode wind measurement */
+												wind_angle_absolute = (Float.parseFloat(wind_angle_str)) % 360;
+												wind_angle_relative = wind_angle_absolute - instance.mSlopeOrientation;
+												if (wind_angle_absolute > 180 + instance.mSlopeOrientation) {
+													wind_angle_relative -= 360;
+												}
+												wind_speed = Float.parseFloat(wind_speed_str);
+												
+												/* evaluate validity of wind values */
+												if ((wind_speed >= 3) && (wind_speed <= 25)) {
+													instance.mWindSpeedLegalTimestamp = currentTime;
+													instance.mWindSpeedIlegal = false;
+												} else {
+													if (!instance.mWindSpeedIlegal) {
+														instance.mWindSpeedLegalTimestamp = currentTime - 1;
+														instance.mWindSpeedIlegal = true;
+													}
+												}
+												if ((wind_angle_relative <= 45) && (wind_angle_relative >= -45)) {
+													instance.mWindDirectionLegalTimestamp = currentTime;
+													instance.mWindDirectionIlegal = false;
+												} else {
+													if (!instance.mWindDirectionIlegal) {
+														instance.mWindDirectionLegalTimestamp = currentTime - 1;
+														instance.mWindDirectionIlegal = true;
+													}
+												}
+												instance.mWindMeasurementReceivedTimestamp = currentTime;
+												instance.mWindDisconnected = false;
+												
+												/* compute user readable wind report */
+												if (((currentTime - instance.mWindSpeedLegalTimestamp) < WIND_ILLEGAL_TIME) &&
+														((currentTime - instance.mWindDirectionLegalTimestamp) < WIND_ILLEGAL_TIME)) {
+													instance.mWindLegal = true;
+													instance.mDriver.windLegal();
+												} else {
+													instance.mWindLegal = false;
+													instance.mDriver.windIllegal();
+												}
+											} catch (NumberFormatException | IndexOutOfBoundsException e) {
+												e.printStackTrace();
 											}
-											wind_speed = Float.parseFloat(wind_speed_str);
-
-											/* evaluate validity of wind values */
-                                            if ((wind_speed >= 3) && (wind_speed <= 25)) {
-												instance.mWindSpeedLegalTimestamp = currentTime;
-												instance.mWindSpeedIlegal = false;
-                                            } else {
-                                                if (!instance.mWindSpeedIlegal) {
-													instance.mWindSpeedLegalTimestamp = currentTime - 1;
-													instance.mWindSpeedIlegal = true;
-                                                }
-                                            }
-                                            if ((wind_angle_relative <= 45) && (wind_angle_relative >= -45)) {
-												instance.mWindDirectionLegalTimestamp = currentTime;
-												instance.mWindDirectionIlegal = false;
-                                            } else {
-                                                if (!instance.mWindDirectionIlegal) {
-													instance.mWindDirectionLegalTimestamp = currentTime - 1;
-													instance.mWindDirectionIlegal = true;
-                                                }
-                                            }
-											instance.mWindMeasurementReceivedTimestamp = currentTime;
-											instance.mWindDisconnected = false;
-
-											/* compute user readable wind report */
-											if (((currentTime - instance.mWindSpeedLegalTimestamp) < WIND_ILLEGAL_TIME) &&
-												((currentTime - instance.mWindDirectionLegalTimestamp) < WIND_ILLEGAL_TIME)) {
-												instance.mWindLegal = true;
-												instance.mDriver.windLegal();
-											} else {
-												instance.mWindLegal = false;
-												instance.mDriver.windIllegal();
-											}
-										} catch (NumberFormatException | IndexOutOfBoundsException e) {
-											e.printStackTrace();
 										}
 									}
 									break;

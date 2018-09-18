@@ -260,54 +260,54 @@ public class RaceActivity extends ListActivity {
     
             // Start Results server
             startServers();
-
-            mFetchIpAsyncTask = new FetchIPAsyncTask();
-            mRaceTitleHandler = new Handler();
-            mScrollHandler = new Handler();
-            mNextRoundHandler = new Handler();
-            mNextPilotHandler = new Handler();
-    
-            mCheckConnectionRunnable = new Runnable(){
-                public void run(){
-                    Log.d("UUUUU", "CHECKING CONN");
-                    sendCommand("get_connection_status");
-                    if (mFetchIpAsyncTask.getStatus() == AsyncTask.Status.FINISHED) {
-                        mFetchIpAsyncTask = new FetchIPAsyncTask();
-                    }
-                    if (mFetchIpAsyncTask.getStatus() == AsyncTask.Status.PENDING) {
-                        mFetchIpAsyncTask.execute();
-                    }
-                    mRaceTitleHandler.postDelayed(this, 5000);
-                }
-            };
-            mNextPilotRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    showNextPilot();
-                }
-            };
-            mNextRoundRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    nextRound();
-                }
-            };
-            mScrollToNextPilotRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    mListView.smoothScrollToPositionFromTop(mNextPilot.position - 1, 0, 500);
-                }
-            };
-            mScrollToTopRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    mListView.smoothScrollToPositionFromTop(0, 0, 500);
-                }
-            };
-    
-            mRaceTitleHandler.postDelayed(mCheckConnectionRunnable, 100);
         }
-        
+
+        mFetchIpAsyncTask = new FetchIPAsyncTask();
+        mRaceTitleHandler = new Handler();
+        mScrollHandler = new Handler();
+        mNextRoundHandler = new Handler();
+        mNextPilotHandler = new Handler();
+
+        mCheckConnectionRunnable = new Runnable(){
+            public void run(){
+                Log.d("UUUUU", "CHECKING CONN");
+                sendCommand("get_connection_status");
+                if (mFetchIpAsyncTask.getStatus() == AsyncTask.Status.FINISHED) {
+                    mFetchIpAsyncTask = new FetchIPAsyncTask();
+                }
+                if (mFetchIpAsyncTask.getStatus() == AsyncTask.Status.PENDING) {
+                    mFetchIpAsyncTask.execute();
+                }
+                mRaceTitleHandler.postDelayed(this, 5000);
+            }
+        };
+        mNextPilotRunnable = new Runnable() {
+            @Override
+            public void run() {
+                showNextPilot();
+            }
+        };
+        mNextRoundRunnable = new Runnable() {
+            @Override
+            public void run() {
+                nextRound();
+            }
+        };
+        mScrollToNextPilotRunnable = new Runnable() {
+            @Override
+            public void run() {
+                mListView.smoothScrollToPositionFromTop(mNextPilot.position - 1, 0, 500);
+            }
+        };
+        mScrollToTopRunnable = new Runnable() {
+            @Override
+            public void run() {
+                mListView.smoothScrollToPositionFromTop(0, 0, 500);
+            }
+        };
+
+        mRaceTitleHandler.postDelayed(mCheckConnectionRunnable, 100);
+    
         setTitle(mRace.name);
         setRaceRoundTitle(Integer.toString(mRace.round));
 
