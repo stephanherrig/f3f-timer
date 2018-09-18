@@ -34,6 +34,8 @@ public class TcpIoService extends Service implements DriverInterface {
 	private static final int F3FTIMER_SERVER_PORT = 1234;
     
     private static final long WIND_ILLEGAL_TIME = 20000;
+	private static final long RECONNECT_INTERVAL_TIME = 3000;
+	private static final long RECEIVE_TIME_TIMEOUT = 1000;
 
 	// Commands from raspberrypi
 	private static final String FT_TURNA = "A";
@@ -46,14 +48,25 @@ public class TcpIoService extends Service implements DriverInterface {
 	private static final String FT_TIME = "T";
 	private static final String FT_LEGS = "L";
 	private static final String FT_SPEECH = "X";
-	private static final String FT_ALIVE = ".";
 
 	private static final String ICN_CONN = "on_rasp";
 	private static final String ICN_DISCONN = "off_rasp";
 	
-	private static DecimalFormat NUMBER_FORMATTER = new DecimalFormat("+0.00;-0.00");
+	private static final DecimalFormat NUMBER_FORMATTER = new DecimalFormat("+0.00;-0.00");
 	
+	private static final ReentrantLock mSocketLock = new ReentrantLock();
+	private static final ReentrantLock mReinstateLock = new ReentrantLock();
+
 	private static TcpIoService instance;
+	
+	private static Socket mmSocket;
+	private static InputStream mmInStream;
+	private static OutputStream mmOutStream;
+	
+	private static ConnectThread connectThread;
+	private static ListenThread listenThread;
+	private static SendThread sendThread;
+	private static AliveThread aliveThread;
 	
 	private Driver mDriver;
 	
@@ -82,18 +95,6 @@ public class TcpIoService extends Service implements DriverInterface {
 
 	private float mSlopeOrientation = 0.0f;
 	private String mF3ftimerServerIp = DEFAULT_F3FTIMER_SERVER_IP;
-
-	private static final ReentrantLock mSocketLock = new ReentrantLock();
-	private static final ReentrantLock mReinstateLock = new ReentrantLock();
-	
-	private Socket mmSocket;
-	private InputStream mmInStream;
-	private OutputStream mmOutStream;
-	
-	private ConnectThread connectThread;
-	private ListenThread listenThread;
-	private SendThread sendThread;
-	private AliveThread aliveThread;
 	
 
 	private class ConnectThread extends Thread {
@@ -122,117 +123,116 @@ public class TcpIoService extends Service implements DriverInterface {
 
 		@Override
 		public void run() {
-			if (instance != null) {
-				Thread.currentThread().setName("ConnectThread" + Thread.currentThread().getId());
-				android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
-				Looper.prepare();
-				
-				while (instance != null && instance.connectThread != null && instance.connectThread.isRunning()) {
-					instance.mConnected = false;
-					instance.driverDisconnected();
+			Thread.currentThread().setName("ConnectThread" + Thread.currentThread().getId());
+			android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+			Looper.prepare();
+			
+			while (instance != null && connectThread != null && connectThread.isRunning()) {
+				instance.mConnected = false;
+				instance.driverDisconnected();
+				try {
+					mReinstateLock.lock();
+					// Connect the device through the socket. This will block
+					// until it succeeds or throws an exception
+					InetSocketAddress rpiSocketAdr = new InetSocketAddress(instance.mF3ftimerServerIp, F3FTIMER_SERVER_PORT);
+					Log.i(TAG, "connecting to " + rpiSocketAdr.getHostName() + ":" + rpiSocketAdr.getPort());
 					try {
-						mReinstateLock.lock();
-						// Connect the device through the socket. This will block
-						// until it succeeds or throws an exception
-						InetSocketAddress rpiSocketAdr = new InetSocketAddress(instance.mF3ftimerServerIp, F3FTIMER_SERVER_PORT);
-						Log.i(TAG, "connecting to " + rpiSocketAdr.getHostName() + ":" + rpiSocketAdr.getPort());
-						try {
-							if (instance.aliveThread != null) {
-								Log.d(TAG, "joining aliveThread");
-								instance.aliveThread.quit();
-								instance.aliveThread.join();
-								instance.aliveThread = null;
-								Log.d(TAG, "joined aliveThread");
-							}
+						if (aliveThread != null) {
+							Log.d(TAG, "joining aliveThread");
+							aliveThread.quit();
+							aliveThread.join();
+							aliveThread = null;
+							Log.d(TAG, "joined aliveThread");
+						}
 
-							if (instance.sendThread != null) {
-								Log.d(TAG, "joining sendThread");
-								instance.sendThread.quit();
-								instance.sendThread.join();
-								instance.sendThread = null;
-								Log.d(TAG, "joined sendThread");
-							}
-							
-							if (instance.listenThread != null) {
-								Log.d(TAG, "joining listenThread");
-								instance.listenThread.quit();
-								instance.listenThread.join();
-								instance.listenThread = null;
-								Log.d(TAG, "joined listenThread");
-							}
+						if (sendThread != null) {
+							Log.d(TAG, "joining sendThread");
+							sendThread.quit();
+							sendThread.join();
+							sendThread = null;
+							Log.d(TAG, "joined sendThread");
+						}
+						
+						if (listenThread != null) {
+							Log.d(TAG, "joining listenThread");
+							listenThread.quit();
+							listenThread.join();
+							listenThread = null;
+							Log.d(TAG, "joined listenThread");
+						}
 
-							mSocketLock.lock();
-							if (instance.mmSocket != null) {
-								try {
-									if (!instance.mmSocket.isOutputShutdown()) {
-										instance.mmSocket.getOutputStream().flush();
-										instance.mmSocket.shutdownOutput();
-									}
-									if (!instance.mmSocket.isInputShutdown()) {
-										instance.mmSocket.shutdownInput();
-									}
-									if (!instance.mmSocket.isClosed()) {
-										instance.mmSocket.close();
-										instance.mmSocket = null;
-									}
-								} catch (IOException e1) {
-									e1.printStackTrace();
+						mSocketLock.lock();
+						if (mmSocket != null) {
+							try {
+								if (!mmSocket.isOutputShutdown()) {
+									mmSocket.getOutputStream().flush();
+									mmSocket.shutdownOutput();
+									mmOutStream = null;
 								}
+								if (!mmSocket.isInputShutdown()) {
+									mmSocket.shutdownInput();
+									mmInStream = null;
+								}
+								if (!mmSocket.isClosed()) {
+									mmSocket.close();
+									mmSocket = null;
+								}
+							} catch (IOException e1) {
+								e1.printStackTrace();
 							}
-							instance.mmSocket = new Socket();
-							instance.mmSocket.setReuseAddress(true);
-							instance.mmSocket.setTcpNoDelay(true);
-							instance.mmSocket.setSoLinger(false, 0);
-							instance.mmSocket.setSoTimeout(1000);
-							instance.mmSocket.setSendBufferSize(64);
-							instance.mmSocket.setReceiveBufferSize(64);
-							//mmSocket.setKeepAlive(true);
-							instance.mmSocket.connect(rpiSocketAdr, 5000);
-							// Do work to manage the connection (in a separate thread)
-							instance.mmInStream = instance.mmSocket.getInputStream();
-							instance.mmOutStream = instance.mmSocket.getOutputStream();
-							Log.d(TAG, "Socket created");
-							mSocketLock.unlock();
+						}
+						
+						/* now wait until the peer socket times out */
+						sleep(RECONNECT_INTERVAL_TIME);
+						
+						mmSocket = new Socket();
+						mmSocket.setReuseAddress(true);
+						mmSocket.setTcpNoDelay(true);
+						mmSocket.setSoLinger(false, 0);
+						mmSocket.setSoTimeout(1000);
+						mmSocket.setSendBufferSize(64);
+						mmSocket.setReceiveBufferSize(64);
+						//mmSocket.setKeepAlive(true);
+						mmSocket.connect(rpiSocketAdr, 5000);
+						// Do work to manage the connection (in a separate thread)
+						mmInStream = mmSocket.getInputStream();
+						mmOutStream = mmSocket.getOutputStream();
+						Log.d(TAG, "Socket created");
+						mSocketLock.unlock();
 
-							Log.d(TAG, "starting sendThread");
-							instance.sendThread = new SendThread();
-							instance.sendThread.start();
-							
-							Log.d(TAG, "starting listenThread");
-							instance.listenThread = new ListenThread();
-							instance.listenThread.start();
-							
-							Log.d(TAG, "starting aliveThread");
-							instance.aliveThread = new AliveThread();
-							instance.aliveThread.start();
-							
-							reconnecting = false;
-							instance.mConnected = true;
-							instance.driverConnected();
-							
-							Log.i(TAG, "connected to " + rpiSocketAdr.getHostName() + ":" + rpiSocketAdr.getPort());
-							mReinstateLock.unlock();
+						Log.d(TAG, "starting sendThread");
+						sendThread = new SendThread();
+						sendThread.start();
+						
+						Log.d(TAG, "starting listenThread");
+						listenThread = new ListenThread();
+						listenThread.start();
+						
+						Log.d(TAG, "starting aliveThread");
+						aliveThread = new AliveThread();
+						aliveThread.start();
+						
+						reconnecting = false;
+						instance.mConnected = true;
+						instance.driverConnected();
+						
+						Log.i(TAG, "connected to " + rpiSocketAdr.getHostName() + ":" + rpiSocketAdr.getPort());
+						mReinstateLock.unlock();
 
-							while (instance != null && instance.connectThread != null && instance.connectThread.isRunning()) {
-								sleep(1000);
-							}
-						} catch (IOException connectException) {
-							connectException.printStackTrace();
+						while (instance != null && connectThread != null && connectThread.isRunning()) {
+							sleep(1000);
 						}
-					} catch (InterruptedException e) {
-						// nothing to do
-					} finally {
-						if (mSocketLock.isHeldByCurrentThread()) {
-							mSocketLock.unlock();
-						}
-						if (mReinstateLock.isHeldByCurrentThread()) {
-							mReinstateLock.unlock();
-						}
+					} catch (IOException connectException) {
+						connectException.printStackTrace();
 					}
-					try {
-						sleep(1000);
-					} catch (InterruptedException e) {
-						// nothing to do
+				} catch (InterruptedException e) {
+					// nothing to do
+				} finally {
+					if (mSocketLock.isHeldByCurrentThread()) {
+						mSocketLock.unlock();
+					}
+					if (mReinstateLock.isHeldByCurrentThread()) {
+						mReinstateLock.unlock();
 					}
 				}
 			}
@@ -310,10 +310,10 @@ public class TcpIoService extends Service implements DriverInterface {
 				public void handleMessage(Message msg) {
 					try {
 						String cmd = ((String)msg.obj);
-						if (cmd.length() > 0) {
+						if (cmd.length() > 0 && mmOutStream != null) {
 							Log.i(TAG, "send Cmd \"" + cmd + "\" (" + cmd.length() + ")");
-							instance.mmOutStream.write(cmd.getBytes(), 0, cmd.length());
-							instance.mmOutStream.flush();
+							mmOutStream.write(cmd.getBytes(), 0, cmd.length());
+							mmOutStream.flush();
 						}
 					} catch (Throwable e) {
 						if (instance != null) {
@@ -350,13 +350,13 @@ public class TcpIoService extends Service implements DriverInterface {
 			Thread.currentThread().setName("AliveThread" + this.getId());
 			Looper.prepare();
 			
-			while (instance != null && instance.aliveThread != null && instance.aliveThread.isRunning()) {
+			while (instance != null && aliveThread != null && aliveThread.isRunning()) {
 				try {
-					Thread.sleep(1000);
+					Thread.sleep(RECONNECT_INTERVAL_TIME);
 					if (instance != null) {
 						if (instance.mLastReceiveTimestamp < System.currentTimeMillis() - 5000) {
 							Log.d(TAG, "ListenThread stalled ... reconnect");
-							instance.connectThread.reconnect();
+							connectThread.reconnect();
 						}
 					}
 				}
@@ -494,19 +494,19 @@ public class TcpIoService extends Service implements DriverInterface {
 
 		instance.mDriver.start(intent);
 		
-        if (instance.connectThread != null) {
+        if (connectThread != null) {
             Log.d(TAG, "Stop ConnectThread");
-            instance.connectThread.interrupt();
+            connectThread.interrupt();
             try {
-                instance.connectThread.join();
-				instance.connectThread = null;
+                connectThread.join();
+				connectThread = null;
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
             Log.d(TAG, "ConnectThread stopped");
         }
-        instance.connectThread = new ConnectThread();
-        instance.connectThread.start();
+        connectThread = new ConnectThread();
+        connectThread.start();
         Log.d(TAG, "ConnectThread started");
         
 		return (START_STICKY);
@@ -543,18 +543,18 @@ public class TcpIoService extends Service implements DriverInterface {
 	// Driver Interface implementations
 	public void sendLaunch(){
 		instance.timeAlreadyReceived = false;
-		if (instance.sendThread != null && instance.sendThread.isAlive()) {
+		if (sendThread != null && sendThread.isAlive()) {
 			Log.i(TAG, "sendLaunch");
-			instance.sendThread.sendCmd(FT_START + " ");
+			sendThread.sendCmd(FT_START + " ");
 		}
 	}
 
 	public void sendAbort(){
 		if (instance != null) {
 			cancel();
-			if (instance.sendThread != null && instance.sendThread.isAlive()) {
+			if (sendThread != null && sendThread.isAlive()) {
 				Log.i(TAG, "sendAbort Cancel");
-				instance.sendThread.sendCmd(FT_CANCEL + " ");
+				sendThread.sendCmd(FT_CANCEL + " ");
 			}
 		}
 	}
@@ -571,7 +571,7 @@ public class TcpIoService extends Service implements DriverInterface {
 		if (!instance.timeAlreadyReceived) {
 			try {
 				/* Wait some time for receiving the time remotely. */
-				Thread.sleep(1000);
+				Thread.sleep(RECEIVE_TIME_TIMEOUT);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -596,9 +596,9 @@ public class TcpIoService extends Service implements DriverInterface {
 	}
 
 	public void sendSpeechText(String lang, String text){
-		if (instance.sendThread != null && instance.sendThread.isAlive()) {
+		if (sendThread != null && sendThread.isAlive()) {
 			Log.i(TAG, "sendSpeechText \"" + lang.substring(0, 2) + "\" \"" + text + "\"");
-			instance.sendThread.sendCmd(FT_SPEECH + lang.substring(0, 2) + text + " ");
+			sendThread.sendCmd(FT_SPEECH + lang.substring(0, 2) + text + " ");
 		}
 	}
 	
@@ -613,11 +613,11 @@ public class TcpIoService extends Service implements DriverInterface {
 		long currentTime;
 
 		//noinspection InfiniteLoopStatement
-		while(instance != null && instance.listenThread != null && instance.listenThread.isRunning()) {
+		while(instance != null && mmInStream != null && listenThread != null && listenThread.isRunning()) {
 			currentTime = System.currentTimeMillis();
 			try {
 				// Read from the InputStream
-				bufferLength = instance.mmInStream.read(buffer);
+				bufferLength = mmInStream.read(buffer);
 				if (bufferLength > 0) {
 					instance.mLastReceiveTimestamp = currentTime;
 					byte[] data = new byte[bufferLength];
@@ -760,13 +760,13 @@ public class TcpIoService extends Service implements DriverInterface {
 						}
 					} // end for loop
 				} else if (bufferLength == -1) {
-					if (instance != null && instance.listenThread != null && instance.listenThread.isRunning()) {
+					if (instance != null && listenThread != null && listenThread.isRunning()) {
 						instance.closeSocketAndDisconnect(false);
 					}
 					break;
 				}
 			} catch (Throwable e) {
-				if (instance != null && instance.listenThread != null && instance.listenThread.isRunning()) {
+				if (instance != null && listenThread != null && listenThread.isRunning()) {
 					if (1 == instance.handleThrowable(e)) {
 						break;
 					}
@@ -774,7 +774,7 @@ public class TcpIoService extends Service implements DriverInterface {
 			}
 			
 			
-			if (instance != null && instance.listenThread != null && instance.listenThread.isRunning()) {
+			if (instance != null && listenThread != null && listenThread.isRunning()) {
 				try {
 					// now update wind data
 					if (instance.mDriver != null) {
@@ -800,7 +800,7 @@ public class TcpIoService extends Service implements DriverInterface {
 						}
 					}
 				} catch (Throwable e) {
-					if (instance != null && instance.listenThread != null && instance.listenThread.isRunning()) {
+					if (instance != null && listenThread != null && listenThread.isRunning()) {
 						if (1 == instance.handleThrowable(e)) {
 							break;
 						}
@@ -826,15 +826,15 @@ public class TcpIoService extends Service implements DriverInterface {
 	private void closeSocketAndDisconnect(boolean quitConnectThread) {
 		if (mReinstateLock.tryLock()) {
 			if (instance != null) {
-				if (instance.connectThread != null) {
+				if (connectThread != null) {
 					if (!quitConnectThread) {
-						instance.connectThread.reconnect();
+						connectThread.reconnect();
 					} else {
-						if (instance.connectThread.isRunning()) {
-							instance.connectThread.quit();
+						if (connectThread.isRunning()) {
+							connectThread.quit();
 							try {
-								instance.connectThread.join();
-								instance.connectThread = null;
+								connectThread.join();
+								connectThread = null;
 							} catch (InterruptedException e) {
 								e.printStackTrace();
 							}
