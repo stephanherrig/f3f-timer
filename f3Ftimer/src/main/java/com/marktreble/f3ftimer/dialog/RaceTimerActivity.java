@@ -182,7 +182,7 @@ public class RaceTimerActivity extends FragmentActivity {
 		Point pt = new Point();
 		getWindowManager().getDefaultDisplay().getSize(pt);
 		WindowManager.LayoutParams lp = getWindow().getAttributes();
-		lp.y += (pt.y / 20);
+		lp.y += (pt.y / 15);
 		getWindow().setAttributes(lp);
 		
 		mResize = (ImageView)findViewById(R.id.window_resize);
