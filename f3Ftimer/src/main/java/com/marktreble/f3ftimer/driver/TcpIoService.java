@@ -56,8 +56,6 @@ public class TcpIoService extends Service implements DriverInterface {
 	
 	private static final ReentrantLock mThreadLock = new ReentrantLock();
 
-	private static TcpIoService instance;
-	
 	private static Socket mmSocket;
 	private static InputStream mmInStream;
 	private static OutputStream mmOutStream;
@@ -66,6 +64,8 @@ public class TcpIoService extends Service implements DriverInterface {
 	private static ListenThread listenThread;
 	private static SendThread sendThread;
 	private static AliveThread aliveThread;
+	
+	private static TcpIoService mInstance;
 	
 	private Driver mDriver;
 	
@@ -126,14 +126,14 @@ public class TcpIoService extends Service implements DriverInterface {
 			android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
 			Looper.prepare();
 			
-			while (instance != null && connectThread != null && connectThread.isRunning()) {
-				instance.mConnected = false;
-				instance.driverDisconnected();
+			while (connectThread != null && connectThread.isRunning()) {
+				mConnected = false;
+				driverDisconnected();
 				try {
 					mThreadLock.lock();
 					// Connect the device through the socket. This will block
 					// until it succeeds or throws an exception
-					InetSocketAddress rpiSocketAdr = new InetSocketAddress(instance.mF3ftimerServerIp, F3FTIMER_SERVER_PORT);
+					InetSocketAddress rpiSocketAdr = new InetSocketAddress(mF3ftimerServerIp, F3FTIMER_SERVER_PORT);
 					Log.i(TAG, "connecting to " + rpiSocketAdr.getHostName() + ":" + rpiSocketAdr.getPort());
 					try {
 						if (aliveThread != null) {
@@ -209,13 +209,13 @@ public class TcpIoService extends Service implements DriverInterface {
 						aliveThread.start();
 						
 						reconnecting = false;
-						instance.mConnected = true;
-						instance.driverConnected();
+						mConnected = true;
+						driverConnected();
 						
 						Log.i(TAG, "connected to " + rpiSocketAdr.getHostName() + ":" + rpiSocketAdr.getPort());
 						mThreadLock.unlock();
 
-						while (instance != null && connectThread != null && connectThread.isRunning()) {
+						while (connectThread != null && connectThread.isRunning()) {
 							sleep(1000);
 						}
 					} catch (IOException connectException) {
@@ -227,6 +227,62 @@ public class TcpIoService extends Service implements DriverInterface {
 					if (mThreadLock.isHeldByCurrentThread()) {
 						mThreadLock.unlock();
 					}
+				}
+			}
+			
+			/* before quitting cleanup the resources */
+			if (aliveThread != null) {
+				Log.d(TAG, "joining aliveThread");
+				aliveThread.quit();
+				try {
+					aliveThread.join();
+				} catch (InterruptedException e) {
+					// nothing to do
+				}
+				aliveThread = null;
+				Log.d(TAG, "joined aliveThread");
+			}
+			
+			if (sendThread != null) {
+				Log.d(TAG, "joining sendThread");
+				sendThread.quit();
+				try {
+					sendThread.join();
+				} catch (InterruptedException e) {
+					// nothing to do
+				}
+				sendThread = null;
+				Log.d(TAG, "joined sendThread");
+			}
+			
+			if (listenThread != null) {
+				Log.d(TAG, "joining listenThread");
+				listenThread.quit();
+				try {
+					listenThread.join();
+				} catch (InterruptedException e) {
+					// nothing to do
+				}
+				listenThread = null;
+				Log.d(TAG, "joined listenThread");
+			}
+			if (mmSocket != null) {
+				try {
+					if (!mmSocket.isOutputShutdown()) {
+						mmSocket.getOutputStream().flush();
+						mmSocket.shutdownOutput();
+						mmOutStream = null;
+					}
+					if (!mmSocket.isInputShutdown()) {
+						mmSocket.shutdownInput();
+						mmInStream = null;
+					}
+					if (!mmSocket.isClosed()) {
+						mmSocket.close();
+						mmSocket = null;
+					}
+				} catch (IOException e1) {
+					e1.printStackTrace();
 				}
 			}
 		}
@@ -250,10 +306,8 @@ public class TcpIoService extends Service implements DriverInterface {
 		@Override
 		public void run() {
 			Thread.currentThread().setName("ListenThread" + this.getId());
-			if (instance != null) {
-				Looper.prepare();
-				instance.listen();
-			}
+			Looper.prepare();
+			listen();
 		}
 	}
 
@@ -309,9 +363,7 @@ public class TcpIoService extends Service implements DriverInterface {
 							mmOutStream.flush();
 						}
 					} catch (Throwable e) {
-						if (instance != null) {
-							instance.handleThrowable(e);
-						}
+						handleThrowable(e);
 					}
 				}
 			};
@@ -343,14 +395,12 @@ public class TcpIoService extends Service implements DriverInterface {
 			Thread.currentThread().setName("AliveThread" + this.getId());
 			Looper.prepare();
 			
-			while (instance != null && aliveThread != null && aliveThread.isRunning()) {
+			while (aliveThread != null && aliveThread.isRunning()) {
 				try {
 					Thread.sleep(RECONNECT_INTERVAL_TIME);
-					if (instance != null) {
-						if (instance.mLastReceiveTimestamp < System.currentTimeMillis() - 5000) {
-							Log.d(TAG, "ListenThread stalled ... reconnect");
-							connectThread.reconnect();
-						}
+					if (mLastReceiveTimestamp < System.currentTimeMillis() - 5000) {
+						Log.d(TAG, "ListenThread stalled ... reconnect");
+						connectThread.reconnect();
 					}
 				}
 				catch (InterruptedException e) {
@@ -371,32 +421,30 @@ public class TcpIoService extends Service implements DriverInterface {
 				if (data == null) return;
 				
 				if (data.equals("get_connection_status")) {
-					if (instance != null) {
-						if (!instance.mConnected) {
-							instance.closeSocketAndDisconnect(false);
-						} else {
-							instance.driverConnected();
-						}
+					if (!mConnected) {
+						closeSocketAndDisconnect(false);
+					} else {
+						driverConnected();
 					}
 				}
 				
 				if (data.equals("model_launched")) {
-					instance.mState = 2;
+					mState = 2;
 				}
 				
 				if (data.equals("working_time_started")) {
-					instance.mState = 1;
+					mState = 1;
 				}
 				
 				if (data.equals("pref_wind_angle_offset")) {
-					instance.mSlopeOrientation = Float.valueOf(intent.getExtras().getString("com.marktreble.f3ftimer.value"));
-					Log.d("TcpIoService", "pref_wind_angle_offset=" + instance.mSlopeOrientation);
+					mSlopeOrientation = Float.valueOf(intent.getExtras().getString("com.marktreble.f3ftimer.value"));
+					Log.d("TcpIoService", "pref_wind_angle_offset=" + mSlopeOrientation);
 				}
 				
 				if (data.equals("pref_input_tcpio_ip")) {
-					instance.mF3ftimerServerIp = intent.getExtras().getString("com.marktreble.f3ftimer.value", DEFAULT_F3FTIMER_SERVER_IP);
-					Log.d("TcpIoService", "Connecting to new IP: " + instance.mF3ftimerServerIp);
-					instance.stopSelf();
+					mF3ftimerServerIp = intent.getExtras().getString("com.marktreble.f3ftimer.value", DEFAULT_F3FTIMER_SERVER_IP);
+					Log.d("TcpIoService", "Connecting to new IP: " + mF3ftimerServerIp);
+					stopSelf();
 				}
 			}
 		}
@@ -411,29 +459,29 @@ public class TcpIoService extends Service implements DriverInterface {
 		Log.d(TAG, "CREATE");
 		super.onCreate();
 
-		if (instance == null) {
-			instance = this;
+		if (mInstance == null) {
+			mInstance = this;
 			
-			instance.mF3ftimerServerIp = PreferenceManager.getDefaultSharedPreferences(this).getString("pref_input_tcpio_ip", DEFAULT_F3FTIMER_SERVER_IP);
-			instance.mSlopeOrientation = Float.parseFloat(PreferenceManager.getDefaultSharedPreferences(this).getString("pref_wind_angle_offset", "0.0f"));
+			mF3ftimerServerIp = PreferenceManager.getDefaultSharedPreferences(this).getString("pref_input_tcpio_ip", DEFAULT_F3FTIMER_SERVER_IP);
+			mSlopeOrientation = Float.parseFloat(PreferenceManager.getDefaultSharedPreferences(this).getString("pref_wind_angle_offset", "0.0f"));
 			
-			instance.mTimerStatus = 0;
-			instance.mState = 0;
-			instance.mConnected = false;
-			instance.mWindDisconnected = true;
-			instance.mWindLegal = false;
-			instance.mWindSpeedIlegal = false;
-			instance.mWindDirectionIlegal = false;
-			instance.mTurnA = false;
-			instance.mTurnB = false;
-			instance.mLeg = 0;
-			instance.mDNFButtonTimestamp = 0;
-			instance.mLastReceiveTimestamp = System.currentTimeMillis();
+			mTimerStatus = 0;
+			mState = 0;
+			mConnected = false;
+			mWindDisconnected = true;
+			mWindLegal = false;
+			mWindSpeedIlegal = false;
+			mWindDirectionIlegal = false;
+			mTurnA = false;
+			mTurnB = false;
+			mLeg = 0;
+			mDNFButtonTimestamp = 0;
+			mLastReceiveTimestamp = System.currentTimeMillis();
 			
-			instance.mDriver = new Driver(this);
+			mDriver = new Driver(this);
 			
-			instance.onBroadcast = new UIBroadcastReceiver();
-			registerReceiver(instance.onBroadcast, new IntentFilter("com.marktreble.f3ftimer.onUpdateFromUI"));
+			onBroadcast = new UIBroadcastReceiver();
+			registerReceiver(onBroadcast, new IntentFilter("com.marktreble.f3ftimer.onUpdateFromUI"));
 		}
 		Log.d(TAG, "CREATED");
 	}
@@ -441,19 +489,14 @@ public class TcpIoService extends Service implements DriverInterface {
 	@Override
 	public void onDestroy() {
 		Log.i(TAG, "ONDESTROY!");
-		
-		if (instance.mDriver != null) {
-			instance.mDriver.destroy();
-			instance.mDriver = null;
+		if (mDriver != null) {
+			mDriver.destroy();
+			mDriver = null;
 		}
-		
-		instance.unregisterReceiver(instance.onBroadcast);
-		
-		instance.closeSocketAndDisconnect(true);
-		
-		instance = null;
-		
+		unregisterReceiver(onBroadcast);
+		closeSocketAndDisconnect(true);
 		super.onDestroy();
+		mInstance = null;
 		Log.d(TAG, "DESTROYED");
 	}
 	
@@ -484,8 +527,8 @@ public class TcpIoService extends Service implements DriverInterface {
     	super.onStartCommand(intent, flags, startId);
 		
 		Log.d(TAG, "onStartCommand");
-
-		instance.mDriver.start(intent);
+		
+		if (mDriver != null) mDriver.start(intent);
 		
         if (connectThread != null) {
             Log.d(TAG, "Stop ConnectThread");
@@ -513,13 +556,13 @@ public class TcpIoService extends Service implements DriverInterface {
 	@Override
 	public void driverConnected() {
 		Log.d(TAG, "driverConnected");
-		if (instance != null && instance.mDriver != null) instance.mDriver.driverConnected(ICN_CONN);
+		if (mDriver != null) mDriver.driverConnected(ICN_CONN);
 	}
 
 	@Override
 	public void driverDisconnected() {
 		Log.d(TAG, "Disconnected");
-		if (instance != null && instance.mDriver != null) instance.mDriver.driverDisconnected(ICN_DISCONN);
+		if (mDriver != null) mDriver.driverDisconnected(ICN_DISCONN);
 	}
 	
 	private void callbackToUI(String cmd, Bundle params) {
@@ -530,12 +573,12 @@ public class TcpIoService extends Service implements DriverInterface {
 		if (params != null) {
 			i.putExtras(params);
 		}
-		instance.sendBroadcast(i);
+		sendBroadcast(i);
 	}
 	
 	// Driver Interface implementations
 	public void sendLaunch(){
-		instance.timeAlreadyReceived = false;
+		timeAlreadyReceived = false;
 		if (sendThread != null && sendThread.isAlive()) {
 			Log.i(TAG, "sendLaunch");
 			sendThread.sendCmd(FT_START + " ");
@@ -543,12 +586,10 @@ public class TcpIoService extends Service implements DriverInterface {
 	}
 
 	public void sendAbort(){
-		if (instance != null) {
-			cancel();
-			if (sendThread != null && sendThread.isAlive()) {
-				Log.i(TAG, "sendAbort Cancel");
-				sendThread.sendCmd(FT_CANCEL + " ");
-			}
+		cancel();
+		if (sendThread != null && sendThread.isAlive()) {
+			Log.i(TAG, "sendAbort Cancel");
+			sendThread.sendCmd(FT_CANCEL + " ");
 		}
 	}
 
@@ -561,7 +602,7 @@ public class TcpIoService extends Service implements DriverInterface {
 	
 	public void finished(String time) {
 		Log.d(TAG, "UI Flight time " + time.trim());
-		if (!instance.timeAlreadyReceived) {
+		if (!timeAlreadyReceived) {
 			try {
 				/* Wait some time for receiving the time remotely. */
 				Thread.sleep(RECEIVE_TIME_TIMEOUT);
@@ -575,16 +616,16 @@ public class TcpIoService extends Service implements DriverInterface {
 	
 	private synchronized void finishedRemote(String time){
 		/* Commit the time that is received first (either by socket or from RaceTimerActivity) */
-		if (!instance.timeAlreadyReceived) {
-			instance.timeAlreadyReceived = true;
+		if (!timeAlreadyReceived) {
+			timeAlreadyReceived = true;
 			Log.d(TAG, "TIME " + time.trim());
-			instance.mDriver.mPilot_Time = Float.parseFloat(time.trim().replace(",", "."));
-			Log.d(TAG, "TIME " + Float.toString(instance.mDriver.mPilot_Time));
-			instance.mDriver.runComplete();
-			instance.mState = 0;
-			instance.mTimerStatus = 0;
-			instance.mLeg = 0;
-			instance.mDriver.ready();
+			mDriver.mPilot_Time = Float.parseFloat(time.trim().replace(",", "."));
+			Log.d(TAG, "TIME " + Float.toString(mDriver.mPilot_Time));
+			mDriver.runComplete();
+			mState = 0;
+			mTimerStatus = 0;
+			mLeg = 0;
+			mDriver.ready();
 		}
 	}
 
@@ -606,13 +647,13 @@ public class TcpIoService extends Service implements DriverInterface {
 		long currentTime;
 
 		//noinspection InfiniteLoopStatement
-		while(instance != null && mmInStream != null && listenThread != null && listenThread.isRunning()) {
+		while(mmInStream != null && listenThread != null && listenThread.isRunning()) {
 			currentTime = System.currentTimeMillis();
 			try {
 				// Read from the InputStream
 				bufferLength = mmInStream.read(buffer);
 				if (bufferLength > 0) {
-					instance.mLastReceiveTimestamp = currentTime;
+					mLastReceiveTimestamp = currentTime;
 					byte[] data = new byte[bufferLength];
 					System.arraycopy(buffer, 0, data, 0, bufferLength);
 					String strbuf = new String(data, 0, data.length).replaceAll("[^\\x20-\\x7F]", "").trim();
@@ -626,122 +667,122 @@ public class TcpIoService extends Service implements DriverInterface {
 							switch (code) {
 								case FT_START:
 									Log.d(TAG, "received: \"" + strbuf + "\"");
-									if (instance.mState < 2) {
-										instance.mDriver.startPressed();
-										instance.mState++;
+									if (mState < 2) {
+										mDriver.startPressed();
+										mState++;
 									}
 									break;
 								case FT_CANCEL:
 									Log.d(TAG, "received: \"" + strbuf + "\"");
-									instance.cancelDialog();
+									cancelDialog();
 									break;
 								case FT_CANCEL_ZERO:
                                     Log.d(TAG, "received: \"" + strbuf + "\"");
-                                    if ((System.currentTimeMillis() - instance.mDNFButtonTimestamp) < 2000) {
+                                    if ((System.currentTimeMillis() - mDNFButtonTimestamp) < 2000) {
                                         Log.d(TAG, "scoreZeroAndCancelDialogAndNextPilot");
-										instance.scoreZeroAndCancelDialogAndNextPilot();
+										scoreZeroAndCancelDialogAndNextPilot();
 									}
-									instance.mDNFButtonTimestamp = System.currentTimeMillis();
+									mDNFButtonTimestamp = System.currentTimeMillis();
 									break;
 								case FT_PENALTY:
 									Log.d(TAG, "received: \"" + strbuf + "\"");
-									if (instance.mLeg >= 1) {
-										instance.mDriver.incPenalty();
+									if (mLeg >= 1) {
+										mDriver.incPenalty();
 									}
 									break;
 								case FT_TIME:
 									Log.d(TAG, "received: \"" + strbuf + "\"");
 									String flight_time = str.substring(1, str.length());
 									Log.i(TAG, "Flight time: " + flight_time);
-									instance.finishedRemote(flight_time);
+									finishedRemote(flight_time);
 									break;
 								case FT_TURNB:
 									// after the model has been started only accept turn A as the first signal
 									// then only accept A after B after A ...
-									instance.mTurnB = true;
+									mTurnB = true;
 								case FT_TURNA:
 									Log.d(TAG, "received: \"" + strbuf + "\"");
-									if (!instance.mTurnB) instance.mTurnA = true;
-									Log.d(TAG, "mState " + instance.mState + " mTurn" + (instance.mTurnA ? "A" : (instance.mTurnB ? "B" : "")));
-									if (instance.mState >= 2) {
-										Log.d(TAG, "mTimerStatus " + instance.mTimerStatus);
-										switch (instance.mTimerStatus) {
+									if (!mTurnB) mTurnA = true;
+									Log.d(TAG, "mState " + mState + " mTurn" + (mTurnA ? "A" : (mTurnB ? "B" : "")));
+									if (mState >= 2) {
+										Log.d(TAG, "mTimerStatus " + mTimerStatus);
+										switch (mTimerStatus) {
 											case 0:
-												if (instance.mTurnA) {
-													instance.mDriver.offCourse();
+												if (mTurnA) {
+													mDriver.offCourse();
 													Log.d(TAG, "offCourse");
 												}
 												break;
 											case 1:
-												if (instance.mTurnA) {
-													instance.mDriver.onCourse();
+												if (mTurnA) {
+													mDriver.onCourse();
 													Log.d(TAG, "onCourse");
-													instance.mLeg = 1;
+													mLeg = 1;
 												}
 												break;
 											default:
-												int turn = instance.mLeg % 2;
-												Log.d(TAG, "mLeg " + instance.mLeg + " turn " + turn);
-												if ((turn == 1 && instance.mTurnB) || (turn == 0 && instance.mTurnA)) {
-													instance.mDriver.legComplete();
+												int turn = mLeg % 2;
+												Log.d(TAG, "mLeg " + mLeg + " turn " + turn);
+												if ((turn == 1 && mTurnB) || (turn == 0 && mTurnA)) {
+													mDriver.legComplete();
 													Log.d(TAG, "legComplete");
-													instance.mLeg++;
+													mLeg++;
 												}
 												break;
 										}
-										if (instance.mTimerStatus <= 1 && instance.mTurnA) {
-											instance.mTimerStatus = instance.mTimerStatus + 1;
-											Log.d(TAG, "mTimerStatus++ " + instance.mTimerStatus);
+										if (mTimerStatus <= 1 && mTurnA) {
+											mTimerStatus = mTimerStatus + 1;
+											Log.d(TAG, "mTimerStatus++ " + mTimerStatus);
 										}
 									}
-									instance.mTurnA = false;
-									instance.mTurnB = false;
+									mTurnA = false;
+									mTurnB = false;
 									break;
 								case FT_WIND:
-									if (instance.mDriver != null) {
-										if (instance.mDriver.mWindMeasurement) {
+									if (mDriver != null) {
+										if (mDriver.mWindMeasurement) {
 											Log.d(TAG, "received: \"" + strbuf + "\"");
 											try {
 												wind_angle_str = str.substring(str.indexOf(",") + 1, str.lastIndexOf(","));
 												wind_speed_str = str.substring(str.lastIndexOf(",") + 1, str.length());
 												/* decode wind measurement */
 												wind_angle_absolute = (Float.parseFloat(wind_angle_str)) % 360;
-												wind_angle_relative = wind_angle_absolute - instance.mSlopeOrientation;
-												if (wind_angle_absolute > 180 + instance.mSlopeOrientation) {
+												wind_angle_relative = wind_angle_absolute - mSlopeOrientation;
+												if (wind_angle_absolute > 180 + mSlopeOrientation) {
 													wind_angle_relative -= 360;
 												}
 												wind_speed = Float.parseFloat(wind_speed_str);
 												
 												/* evaluate validity of wind values */
 												if ((wind_speed >= 3) && (wind_speed <= 25)) {
-													instance.mWindSpeedLegalTimestamp = currentTime;
-													instance.mWindSpeedIlegal = false;
+													mWindSpeedLegalTimestamp = currentTime;
+													mWindSpeedIlegal = false;
 												} else {
-													if (!instance.mWindSpeedIlegal) {
-														instance.mWindSpeedLegalTimestamp = currentTime - 1;
-														instance.mWindSpeedIlegal = true;
+													if (!mWindSpeedIlegal) {
+														mWindSpeedLegalTimestamp = currentTime - 1;
+														mWindSpeedIlegal = true;
 													}
 												}
 												if ((wind_angle_relative <= 45) && (wind_angle_relative >= -45)) {
-													instance.mWindDirectionLegalTimestamp = currentTime;
-													instance.mWindDirectionIlegal = false;
+													mWindDirectionLegalTimestamp = currentTime;
+													mWindDirectionIlegal = false;
 												} else {
-													if (!instance.mWindDirectionIlegal) {
-														instance.mWindDirectionLegalTimestamp = currentTime - 1;
-														instance.mWindDirectionIlegal = true;
+													if (!mWindDirectionIlegal) {
+														mWindDirectionLegalTimestamp = currentTime - 1;
+														mWindDirectionIlegal = true;
 													}
 												}
-												instance.mWindMeasurementReceivedTimestamp = currentTime;
-												instance.mWindDisconnected = false;
+												mWindMeasurementReceivedTimestamp = currentTime;
+												mWindDisconnected = false;
 												
 												/* compute user readable wind report */
-												if (((currentTime - instance.mWindSpeedLegalTimestamp) < WIND_ILLEGAL_TIME) &&
-														((currentTime - instance.mWindDirectionLegalTimestamp) < WIND_ILLEGAL_TIME)) {
-													instance.mWindLegal = true;
-													instance.mDriver.windLegal();
+												if (((currentTime - mWindSpeedLegalTimestamp) < WIND_ILLEGAL_TIME) &&
+														((currentTime - mWindDirectionLegalTimestamp) < WIND_ILLEGAL_TIME)) {
+													mWindLegal = true;
+													mDriver.windLegal();
 												} else {
-													instance.mWindLegal = false;
-													instance.mDriver.windIllegal();
+													mWindLegal = false;
+													mDriver.windIllegal();
 												}
 											} catch (NumberFormatException | IndexOutOfBoundsException e) {
 												e.printStackTrace();
@@ -753,48 +794,48 @@ public class TcpIoService extends Service implements DriverInterface {
 						}
 					} // end for loop
 				} else if (bufferLength == -1) {
-					if (instance != null && listenThread != null && listenThread.isRunning()) {
-						instance.closeSocketAndDisconnect(false);
+					if (listenThread != null && listenThread.isRunning()) {
+						closeSocketAndDisconnect(false);
 					}
 					break;
 				}
 			} catch (Throwable e) {
-				if (instance != null && listenThread != null && listenThread.isRunning()) {
-					if (1 == instance.handleThrowable(e)) {
+				if (listenThread != null && listenThread.isRunning()) {
+					if (1 == handleThrowable(e)) {
 						break;
 					}
 				}
 			}
 			
 			
-			if (instance != null && listenThread != null && listenThread.isRunning()) {
+			if (listenThread != null && listenThread.isRunning()) {
 				try {
 					// now update wind data
-					if (instance.mDriver != null) {
-						if (instance.mDriver.mWindMeasurement) {
-							if (!instance.mWindDisconnected) {
-								if ((currentTime - instance.mWindMeasurementReceivedTimestamp) > WIND_ILLEGAL_TIME) {
+					if (mDriver != null) {
+						if (mDriver.mWindMeasurement) {
+							if (!mWindDisconnected) {
+								if ((currentTime - mWindMeasurementReceivedTimestamp) > WIND_ILLEGAL_TIME) {
 									wind_angle_absolute = 0;
 									wind_angle_relative = 0;
 									wind_speed = 0;
-									instance.mWindLegal = false;
-									instance.mDriver.windIllegal();
-									instance.mWindDisconnected = true;
+									mWindLegal = false;
+									mDriver.windIllegal();
+									mWindDisconnected = true;
 								}
 								String wind_data = formatWindValues(mWindLegal, wind_angle_absolute, wind_angle_relative, wind_speed,
-										instance.mWindMeasurementReceivedTimestamp - instance.mWindSpeedLegalTimestamp,
-										instance.mWindMeasurementReceivedTimestamp - instance.mWindDirectionLegalTimestamp,
-										currentTime - instance.mWindMeasurementReceivedTimestamp);
+										mWindMeasurementReceivedTimestamp - mWindSpeedLegalTimestamp,
+										mWindMeasurementReceivedTimestamp - mWindDirectionLegalTimestamp,
+										currentTime - mWindMeasurementReceivedTimestamp);
 								/* send wind report to GUI */
 								Intent i = new Intent("com.marktreble.f3ftimer.onUpdate");
 								i.putExtra("com.marktreble.f3ftimer.value.wind_values", wind_data);
-								instance.sendBroadcast(i);
+								sendBroadcast(i);
 							}
 						}
 					}
 				} catch (Throwable e) {
-					if (instance != null && listenThread != null && listenThread.isRunning()) {
-						if (1 == instance.handleThrowable(e)) {
+					if (listenThread != null && listenThread.isRunning()) {
+						if (1 == handleThrowable(e)) {
 							break;
 						}
 					}
@@ -807,9 +848,7 @@ public class TcpIoService extends Service implements DriverInterface {
 		if (!(e instanceof IOException)) {
 			e.printStackTrace();
 		} else if (!(e instanceof SocketTimeoutException)) {
-			if (instance != null) {
-				instance.closeSocketAndDisconnect(false);
-			}
+			closeSocketAndDisconnect(false);
 			e.printStackTrace();
 			return 1;
 		}
@@ -818,19 +857,17 @@ public class TcpIoService extends Service implements DriverInterface {
 
 	private void closeSocketAndDisconnect(boolean quitConnectThread) {
 		if (mThreadLock.tryLock()) {
-			if (instance != null) {
-				if (connectThread != null) {
-					if (!quitConnectThread) {
-						connectThread.reconnect();
-					} else {
-						if (connectThread.isRunning()) {
-							connectThread.quit();
-							try {
-								connectThread.join();
-								connectThread = null;
-							} catch (InterruptedException e) {
-								e.printStackTrace();
-							}
+			if (connectThread != null) {
+				if (!quitConnectThread) {
+					connectThread.reconnect();
+				} else {
+					if (connectThread.isRunning()) {
+						connectThread.quit();
+						try {
+							connectThread.join();
+							connectThread = null;
+						} catch (InterruptedException e) {
+							e.printStackTrace();
 						}
 					}
 				}
@@ -840,23 +877,25 @@ public class TcpIoService extends Service implements DriverInterface {
 	}
 
 	private void cancel() {
-		instance.mState = 0;
-		instance.mTimerStatus = 0;
-		instance.mLeg = 0;
+		mState = 0;
+		mTimerStatus = 0;
+		mLeg = 0;
 	}
 	
 	private void cancelDialog(){
 		cancel();
-		instance.mDriver.cancelWorkingTime();
-		instance.callbackToUI("cancel", null);
+		if (mDriver != null) mDriver.cancelWorkingTime();
+		callbackToUI("cancel", null);
 	}
 
 	private void scoreZeroAndCancelDialogAndNextPilot(){
 		cancel();
-		instance.mDriver.cancelWorkingTime();
-		Bundle extras = new Bundle();
-		extras.putInt("com.marktreble.f3ftimer.pilot_id", instance.mDriver.mPid);
-		instance.callbackToUI("score_zero_and_cancel", extras);
+		if (mDriver != null) {
+			mDriver.cancelWorkingTime();
+			Bundle extras = new Bundle();
+			extras.putInt("com.marktreble.f3ftimer.pilot_id", mDriver.mPid);
+			callbackToUI("score_zero_and_cancel", extras);
+		}
 	}
 
 	public String formatWindValues(boolean windLegal, float windAngleAbsolute, float windAngleRelative, float windSpeed, long windSpeedIllegalTimer, long windDirectionIllegalTimer, long windDisconnectedTimer) {
