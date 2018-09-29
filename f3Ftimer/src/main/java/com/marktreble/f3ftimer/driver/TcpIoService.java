@@ -10,7 +10,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 import com.marktreble.f3ftimer.R;
@@ -462,9 +461,6 @@ public class TcpIoService extends Service implements DriverInterface {
 		if (mInstance == null) {
 			mInstance = this;
 			
-			mF3ftimerServerIp = PreferenceManager.getDefaultSharedPreferences(this).getString("pref_input_tcpio_ip", DEFAULT_F3FTIMER_SERVER_IP);
-			mSlopeOrientation = Float.parseFloat(PreferenceManager.getDefaultSharedPreferences(this).getString("pref_wind_angle_offset", "0.0f"));
-			
 			mTimerStatus = 0;
 			mState = 0;
 			mConnected = false;
@@ -525,6 +521,12 @@ public class TcpIoService extends Service implements DriverInterface {
 	@Override
     public int onStartCommand(Intent intent, int flags, int startId){
     	super.onStartCommand(intent, flags, startId);
+		
+		if (intent.hasExtra("com.marktreble.f3ftimer.race_id")) {
+			Bundle extras = intent.getExtras();
+			mF3ftimerServerIp = extras.getString("pref_input_tcpio_ip", DEFAULT_F3FTIMER_SERVER_IP);
+			mSlopeOrientation = Float.valueOf(extras.getString("pref_wind_angle_offset", "0.0f"));
+		}
 		
 		Log.d(TAG, "onStartCommand");
 		

@@ -385,8 +385,6 @@ public class RaceActivity extends ListActivity {
         BluetoothHC05Service.stop(this);
         TcpIoService.stop(this);
 
-        Intent serviceIntent = null;
-        
         // Start Timer Driver
         Bundle extras = getIntent().getExtras();
         if (extras == null)
@@ -401,6 +399,11 @@ public class RaceActivity extends ListActivity {
             if (entry.getValue() instanceof Boolean)
                 extras.putBoolean(entry.getKey(), (Boolean) entry.getValue());
 
+            if (entry.getValue() instanceof Integer)
+                extras.putInt(entry.getKey(), (Integer) entry.getValue());
+
+            if (entry.getValue() instanceof Float)
+                extras.putFloat(entry.getKey(), (Float) entry.getValue());
         }
 
         boolean pref_usb_tethering = sharedPref.getBoolean("pref_usb_tether", false);
