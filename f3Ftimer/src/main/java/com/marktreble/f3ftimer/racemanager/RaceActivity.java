@@ -21,7 +21,6 @@ import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
-import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -154,39 +153,20 @@ public class RaceActivity extends ListActivity {
 
     private RaceData.Group mGroupScoring;
     
-    private String mResultsServerIp;
+    private String mResultsServerHost;
     
     private Handler mRaceTitleHandler;
+    private Handler mSetResultsServerIpViewHandler;
     private Handler mScrollHandler;
     private Handler mNextRoundHandler;
     private Handler mNextPilotHandler;
     
     private Runnable mCheckConnectionRunnable;
+    private Runnable mSetResultsServerIpViewRunnable;
     private Runnable mNextPilotRunnable;
     private Runnable mNextRoundRunnable;
     private Runnable mScrollToNextPilotRunnable;
     private Runnable mScrollToTopRunnable;
-    
-    private class FetchIPAsyncTask extends AsyncTask<Void, Void, String> {
-        @Override
-        protected String doInBackground(Void... params) {
-            return Wifi.getIPAddress(true);
-        }
-        
-        @Override
-        protected void onPostExecute(String ip) {
-            // update the UI (this is executed on UI thread)
-            super.onPostExecute(ip);
-            TextView resultsServerIpView = findViewById(R.id.results_ip);
-            if (resultsServerIpView != null) {
-                mResultsServerIp = String.format("%s:8080", ip);
-                resultsServerIpView.setText(mResultsServerIp);
-            }
-        }
-    }
-    
-    private AsyncTask<Void, Void, String> mFetchIpAsyncTask;
-    
     
     
 	@Override
@@ -248,7 +228,6 @@ public class RaceActivity extends ListActivity {
             mWifiSavedState = false;
             mWindValues ="";
             mListViewScrollPos = null;
-            mResultsServerIp = "";
     
             SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
             mInputSource = sharedPref.getString("pref_input_src", getString(R.string.Demo));
@@ -261,8 +240,8 @@ public class RaceActivity extends ListActivity {
             // Start Results server
             startServers();
         }
-
-        mFetchIpAsyncTask = new FetchIPAsyncTask();
+        
+        mSetResultsServerIpViewHandler = new Handler();
         mRaceTitleHandler = new Handler();
         mScrollHandler = new Handler();
         mNextRoundHandler = new Handler();
@@ -272,13 +251,21 @@ public class RaceActivity extends ListActivity {
             public void run(){
                 Log.d("UUUUU", "CHECKING CONN");
                 sendCommand("get_connection_status");
-                if (mFetchIpAsyncTask.getStatus() == AsyncTask.Status.FINISHED) {
-                    mFetchIpAsyncTask = new FetchIPAsyncTask();
-                }
-                if (mFetchIpAsyncTask.getStatus() == AsyncTask.Status.PENDING) {
-                    mFetchIpAsyncTask.execute();
-                }
                 mRaceTitleHandler.postDelayed(this, 5000);
+            }
+        };
+        mSetResultsServerIpViewRunnable = new Runnable() {
+            @Override
+            public void run() {
+                TextView resultsServerHostView = findViewById(R.id.results_ip);
+                if (resultsServerHostView != null) {
+                    String resultsServerIp = Wifi.getIPAddress(true);
+                    if (resultsServerIp != null && !resultsServerIp.equals("")) {
+                        mResultsServerHost = resultsServerIp + ":8080";
+                        resultsServerHostView.setText(mResultsServerHost);
+                    }
+                }
+                mSetResultsServerIpViewHandler.postDelayed(this, 10000);
             }
         };
         mNextPilotRunnable = new Runnable() {
@@ -307,7 +294,8 @@ public class RaceActivity extends ListActivity {
         };
 
         mRaceTitleHandler.postDelayed(mCheckConnectionRunnable, 100);
-    
+        mSetResultsServerIpViewHandler.postDelayed(mSetResultsServerIpViewRunnable, 100);
+        
         setTitle(mRace.name);
         setRaceRoundTitle(Integer.toString(mRace.round));
 
@@ -335,7 +323,7 @@ public class RaceActivity extends ListActivity {
             Log.d("RaceActivity", "onDestroy finish");
             stopServers();
 //            finishActivity(DLG_TIMER);
-            mFetchIpAsyncTask.cancel(true);
+            mSetResultsServerIpViewHandler.removeCallbacks(mSetResultsServerIpViewRunnable);
             mRaceTitleHandler.removeCallbacks(mCheckConnectionRunnable);
             mScrollHandler.removeCallbacks(mScrollToTopRunnable);
             mScrollHandler.removeCallbacks(mScrollToNextPilotRunnable);
@@ -346,7 +334,7 @@ public class RaceActivity extends ListActivity {
 
 	public void onBackPressed (){
         stopServers();
-        mFetchIpAsyncTask.cancel(true);
+        mSetResultsServerIpViewHandler.removeCallbacks(mSetResultsServerIpViewRunnable);
         mRaceTitleHandler.removeCallbacks(mCheckConnectionRunnable);
         mScrollHandler.removeCallbacks(mScrollToTopRunnable);
         mScrollHandler.removeCallbacks(mScrollToNextPilotRunnable);
@@ -458,7 +446,7 @@ public class RaceActivity extends ListActivity {
     public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         
-        outState.putString("mResultsServerIp", mResultsServerIp);
+        outState.putString("mResultsServerHost", mResultsServerHost);
         
         outState.putBoolean("mPrefWindMeasurement", mPrefWindMeasurement);
         outState.putString("mWindValues", mWindValues);
@@ -488,8 +476,8 @@ public class RaceActivity extends ListActivity {
     @SuppressWarnings("unchecked")
 	@Override
 	public void onRestoreInstanceState(@NonNull Bundle savedInstanceState){
-        mResultsServerIp = savedInstanceState.getString("mResultsServerIp");
-        
+        mResultsServerHost = savedInstanceState.getString("mResultsServerHost");
+    
         mPrefWindMeasurement = savedInstanceState.getBoolean("mPrefWindMeasurement");
         mWindValues = savedInstanceState.getString("mWindValues");
         mPilotDialogShown = savedInstanceState.getBoolean("mPilotDialogShown");
@@ -555,12 +543,14 @@ public class RaceActivity extends ListActivity {
             mWindReadings.setVisibility(View.GONE);
         }
         
-        TextView resultsServerIp = findViewById(R.id.results_ip);
+        TextView resultsServerHostView = findViewById(R.id.results_ip);
         if (mPrefResults){
-            resultsServerIp.setVisibility(View.VISIBLE);
-            resultsServerIp.setText(mResultsServerIp);
+            resultsServerHostView.setVisibility(View.VISIBLE);
+            if (mResultsServerHost != null && mResultsServerHost != "") {
+                resultsServerHostView.setText(mResultsServerHost);
+            }
         } else {
-            resultsServerIp.setVisibility(View.GONE);
+            resultsServerHostView.setVisibility(View.GONE);
         }
     }
 	
