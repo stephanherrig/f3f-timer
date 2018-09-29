@@ -268,6 +268,9 @@ public class BaseImport extends Activity {
                     p.status = Pilot.STATUS_NORMAL;
                     p.group = group;
                     if (p.group > group_count) group_count = p.group;
+                    if (i == 2) {
+                        datasource1.setGroups(race_id, round, group_count);
+                    }
                     p.start_pos = start_pos;
                     p.round = round++;
                     if (colMode > 2) {
@@ -281,7 +284,6 @@ public class BaseImport extends Activity {
                     }
                     datasource2.importPilot(p, race_id);
                 }
-                datasource1.setGroups(race_id, i - 1, group_count);
             }
             datasource1.close();
             datasource2.close();
