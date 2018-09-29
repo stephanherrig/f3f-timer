@@ -3,7 +3,7 @@
     <string name="locale">en</string>
     <string name="app_name">F3Ftimer</string>
     <string name="version">Version</string>
-    <string name="credits">An open source project by Mark Treble</string>
+    <string name="credits">An open source project by Mark Treble (modified by Stephan Herrig)</string>
     <string name="help">Help is not implemented yet</string>
     <string name="menu_settings">Settings</string>
     <string name="app_pilots">Pilot Manager</string>
