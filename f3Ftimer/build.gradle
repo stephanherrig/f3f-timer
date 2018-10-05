@@ -13,6 +13,7 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
             debuggable false
+            resValue("string", "PORT_NUMBER", "8081")
         }
         debug {
             resValue("string", "PORT_NUMBER", "8081")
