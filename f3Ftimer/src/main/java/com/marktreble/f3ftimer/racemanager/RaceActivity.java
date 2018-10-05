@@ -251,7 +251,10 @@ public class RaceActivity extends ListActivity {
             public void run(){
                 Log.d("UUUUU", "CHECKING CONN");
                 sendCommand("get_connection_status");
-                mRaceTitleHandler.postDelayed(this, 5000);
+                if (!mInputSource.equals(getString(R.string.TCP_IO))) {
+                    // disabled for TcpIoService, because it will send a notification on connection status change automatically
+                    mRaceTitleHandler.postDelayed(this, 5000);
+                }
             }
         };
         mSetResultsServerIpViewRunnable = new Runnable() {
@@ -265,7 +268,6 @@ public class RaceActivity extends ListActivity {
                         resultsServerHostView.setText(mResultsServerHost);
                     }
                 }
-                mSetResultsServerIpViewHandler.postDelayed(this, 10000);
             }
         };
         mNextPilotRunnable = new Runnable() {
@@ -294,7 +296,7 @@ public class RaceActivity extends ListActivity {
         };
 
         mRaceTitleHandler.postDelayed(mCheckConnectionRunnable, 100);
-        mSetResultsServerIpViewHandler.postDelayed(mSetResultsServerIpViewRunnable, 100);
+        mSetResultsServerIpViewHandler.postDelayed(mSetResultsServerIpViewRunnable, 1000);
         
         setTitle(mRace.name);
         setRaceRoundTitle(Integer.toString(mRace.round));
@@ -549,7 +551,7 @@ public class RaceActivity extends ListActivity {
         TextView resultsServerHostView = findViewById(R.id.results_ip);
         if (mPrefResults){
             resultsServerHostView.setVisibility(View.VISIBLE);
-            if (mResultsServerHost != null && mResultsServerHost != "") {
+            if (mResultsServerHost != null && !mResultsServerHost.equals("")) {
                 resultsServerHostView.setText(mResultsServerHost);
             }
         } else {
