@@ -669,10 +669,7 @@ public class TcpIoService extends Service implements DriverInterface {
 							switch (code) {
 								case FT_START:
 									Log.d(TAG, "received: \"" + strbuf + "\"");
-									if (mState < 2) {
-										mDriver.startPressed();
-										mState++;
-									}
+									mDriver.startPressed();
 									break;
 								case FT_CANCEL:
 									Log.d(TAG, "received: \"" + strbuf + "\"");
