@@ -147,11 +147,14 @@ public class BaseImport extends Activity {
             Race imported_race = new Race(race_json);
             Race loaded_race = datasource1.getRace(imported_race.name);
             int race_id;
-            /* don't overwrite existing race definition, because then automatic start order by preimported csv would not work */
             if (loaded_race == null) {
                 race_id = (int)datasource1.saveRace(imported_race);
             } else {
                 race_id = loaded_race.id;
+                /* Don't overwrite existing race definition of start_number, rounds_per_flight and offset,
+                 * because then automatic start order by preimported csv would not work.
+                 * The round however needs to be set to the last active one. */
+                datasource1.setRound(race_id, imported_race.round);
             }
 
             // Import Groups

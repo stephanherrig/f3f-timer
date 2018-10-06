@@ -80,7 +80,13 @@ public class RaceData {
 		database.execSQL(sql, data);
 		return  getRace(race_id);
 	}
-
+	
+	public void setRound(int race_id, int round){
+		String sql = "update races set round=? where id=?";
+		String[] data = {Integer.toString(round), Integer.toString(race_id)};
+		database.execSQL(sql, data);
+	}
+	
 	public void setStatus(int race_id, int status) {
 		String sql = "update races set status=? where id=?";
 		String[] data = {Integer.toString(status), Integer.toString(race_id)};
