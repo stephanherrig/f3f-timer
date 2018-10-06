@@ -144,13 +144,14 @@ public class BaseImport extends Activity {
             // Import the new Race or update the existing Race
             RaceData datasource1 = new RaceData(mContext);
             datasource1.open();
-            Race race = new Race(race_json);
-            race = datasource1.getRace(race.name);
+            Race imported_race = new Race(race_json);
+            Race loaded_race = datasource1.getRace(imported_race.name);
             int race_id;
-            if (race == null) {
-                race_id = (int)datasource1.saveRace(race);
+            /* don't overwrite existing race definition, because then automatic start order by preimported csv would not work */
+            if (loaded_race == null) {
+                race_id = (int)datasource1.saveRace(imported_race);
             } else {
-                race_id = race.id;
+                race_id = loaded_race.id;
             }
 
             // Import Groups
