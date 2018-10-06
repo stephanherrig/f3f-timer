@@ -157,8 +157,10 @@ public class SoftBuzzerService extends Service implements DriverInterface, Threa
                 Intent i = new Intent("com.marktreble.f3ftimer.onUpdate");
                 float wind_angle_absolute = mSlopeOrientation + (float)(Math.random()*20) - 1.f;
                 float wind_angle_relative = wind_angle_absolute - mSlopeOrientation;
-                if (wind_angle_absolute > 180 + mSlopeOrientation) {
-                    wind_angle_relative -= 360;
+                if (wind_angle_relative > 180) {
+                    wind_angle_relative = wind_angle_relative - 360;
+                } else if (wind_angle_relative < -180) {
+                    wind_angle_relative = 360 + wind_angle_relative;
                 }
                 float wind_speed = 3f + (float)(Math.random()*3) - 1.5f;
 

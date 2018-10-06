@@ -747,9 +747,12 @@ public class TcpIoService extends Service implements DriverInterface {
 												/* decode wind measurement */
 												wind_angle_absolute = (Float.parseFloat(wind_angle_str)) % 360;
 												wind_angle_relative = wind_angle_absolute - mSlopeOrientation;
-												if (wind_angle_absolute > 180 + mSlopeOrientation) {
-													wind_angle_relative -= 360;
-												}
+												if (wind_angle_relative > 180) {
+													wind_angle_relative = wind_angle_relative - 360;
+                                                } else if (wind_angle_relative < -180) {
+													wind_angle_relative = 360 + wind_angle_relative;
+                                                }
+												
 												wind_speed = Float.parseFloat(wind_speed_str);
 												
 												/* evaluate validity of wind values */
