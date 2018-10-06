@@ -236,9 +236,7 @@ public class RacePilotData {
 		return insert_id;
 	}
 
-	public void importPilot(Pilot p, int race_id) {
-		p.race_id = race_id;
-
+	public void importPilot(Pilot p) {
 		ContentValues values = new ContentValues();
 		values.put("pilot_id", p.pilot_id);
 		values.put("race_id", p.race_id);
@@ -273,9 +271,20 @@ public class RacePilotData {
 	}
 
 	public void addRaceTime(Pilot p) {
+		String[] cols = {"id"};
+		String where = "race_id=? and round=? and pilot_id=?";
+		String[] data = {Integer.toString(p.race_id), Integer.toString(p.round), Integer.toString(p.pilot_id)};
+		Cursor cursor = database.query("racetimes", cols, where, data, null, null, null);
+		cursor.moveToFirst();
 		ContentValues values1 = new ContentValues();
-		values1.putNull("id");
-		values1.put("pilot_id", p.id);
+		if (!cursor.isAfterLast()) {
+			values1.put("id", cursor.getInt(0));
+		} else {
+			values1.putNull("id");
+		}
+		cursor.close();
+		
+		values1.put("pilot_id", p.pilot_id);
 		values1.put("race_id", p.race_id);
 		values1.put("round", p.round);
 		values1.put("group_nr", p.group);
@@ -285,7 +294,7 @@ public class RacePilotData {
 		values1.put("reflight", (p.status &Pilot.STATUS_REFLIGHT) == Pilot.STATUS_REFLIGHT);
 		values1.put("points", p.points);
 		values1.put("penalty", p.penalty);
-		database.insert("racetimes", null, values1);
+		database.replace("racetimes", null, values1);
 	}
 
 	public void updateRacePilotPos(Pilot p, int race_id, int round){

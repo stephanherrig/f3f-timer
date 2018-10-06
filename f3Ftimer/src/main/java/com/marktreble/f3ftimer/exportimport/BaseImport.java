@@ -140,12 +140,18 @@ public class BaseImport extends Activity {
             JSONArray racepilots_json = racedata.optJSONArray("racepilots");
             JSONArray racetimes_json = racedata.optJSONArray("racetimes");
             JSONArray racegroups_json = racedata.optJSONArray("racegroups");
-
+    
+            // Import the new Race or update the existing Race
             RaceData datasource1 = new RaceData(mContext);
             datasource1.open();
-            // Import Race
             Race race = new Race(race_json);
-            int race_id = (int)datasource1.saveRace(race);
+            race = datasource1.getRace(race.name);
+            int race_id;
+            if (race == null) {
+                race_id = (int)datasource1.saveRace(race);
+            } else {
+                race_id = race.id;
+            }
 
             // Import Groups
             for (int i=0; i<racegroups_json.length(); i++){
@@ -169,35 +175,37 @@ public class BaseImport extends Activity {
             RacePilotData datasource2 = new RacePilotData(mContext);
             datasource2.open();
 
-            // Import Pilots
-            ArrayList<Integer> pilot_new_ids = new ArrayList<>();
-            for (int i=0; i<racepilots_json.length(); i++){
-                JSONObject p = racepilots_json.optJSONObject(i);
-                Pilot pilot = new Pilot(p);
-                pilot.id = pilot.pilot_id;
-                int new_id = (int)datasource2.addPilot(pilot, race_id);
-                pilot_new_ids.add(new_id);
-            }
-
-            // Import Race Pilot times
+            // Import Race Pilot credentials and all dynamic data like time
             for (int i=0; i<racetimes_json.length(); i++){
                 JSONArray rounds_json = racetimes_json.optJSONArray(i);
                 for (int j=0; rounds_json != null && j<rounds_json.length(); j++) {
-                    JSONArray pilots_json = rounds_json.optJSONArray(j);
-                    for (int k=0; k<pilots_json.length(); k++) {
-                        JSONObject pilot_json = pilots_json.optJSONObject(k);
-                        int p_id = pilot_json.optInt("id");
-                        p_id = pilot_new_ids.get(p_id - 1);
-                        Pilot p = datasource2.getPilot(p_id, race_id);
+                    JSONArray pilots_dyndata_json = rounds_json.optJSONArray(j);
+                    for (int k=0; k<pilots_dyndata_json.length(); k++) {
+                        JSONObject pilot_dyndata_json = pilots_dyndata_json.optJSONObject(k);
+                        int p_id = pilot_dyndata_json.optInt("id");
+    
+                        Pilot imported_pilot = null;
+                        for (int l=0; l<racepilots_json.length(); l++) {
+                            JSONObject pilot_cred_json = racepilots_json.optJSONObject(l);
+                            if (pilot_cred_json.getInt("id") == p_id) {
+                                imported_pilot = new Pilot(pilot_cred_json);
+                                break;
+                            }
+                        }
+                        Pilot p = null;
+                        if (imported_pilot == null) {
+                            p = new Pilot();
+                        } else {
+                            p = imported_pilot;
+                        }
                         p.race_id = race_id;
                         p.round = i+1;
-                        p.group = pilot_json.optInt("group");
-                        p.start_pos = pilot_json.optInt("start_pos");
-                        p.status = pilot_json.optInt("status");
-                        p.time = (float)pilot_json.optDouble("time");
-                        p.penalty = pilot_json.optInt("penalty");
-                        p.points = (float)pilot_json.optDouble("points");
-                        datasource2.addRaceTime(p);
+                        p.group = pilot_dyndata_json.optInt("group");
+                        p.start_pos = pilot_dyndata_json.optInt("start_pos");
+                        p.time = (float) pilot_dyndata_json.optDouble("time");
+                        p.penalty = pilot_dyndata_json.optInt("penalty");
+                        p.points = (float) pilot_dyndata_json.optDouble("points");
+                        datasource2.importPilot(p);
                     }
                 }
             }
@@ -247,7 +255,6 @@ public class BaseImport extends Activity {
                 datasource1.saveRace(race);
                 race = datasource1.getRace(racename);
             }
-            int race_id = race.id;
 
             RacePilotData datasource2 = new RacePilotData(mContext);
             datasource2.open();
@@ -261,15 +268,16 @@ public class BaseImport extends Activity {
                 String[] values = lines[i].split(";");
                 int pilot_id = Integer.parseInt(values[0]);
                 Pilot p = datasource3.getPilot(pilot_id);
+                p.race_id = race.id;
                 int round = 1;
                 for (int j = 1; j < values.length; j+=colMode) {
                     int group = Integer.parseInt(values[j]);
                     int start_pos = Integer.parseInt(values[j + 1].trim());
                     p.status = Pilot.STATUS_NORMAL;
                     p.group = group;
-                    if (p.group > group_count) group_count = p.group;
-                    if (i == 2) {
-                        datasource1.setGroups(race_id, round, group_count);
+                    if (p.group > group_count) {
+                        group_count = p.group;
+                        datasource1.setGroups(race.id, round, group_count);
                     }
                     p.start_pos = start_pos;
                     p.round = round++;
@@ -282,7 +290,7 @@ public class BaseImport extends Activity {
                         p.points = Float.NaN;
                         p.penalty = 0;
                     }
-                    datasource2.importPilot(p, race_id);
+                    datasource2.importPilot(p);
                 }
             }
             datasource1.close();
