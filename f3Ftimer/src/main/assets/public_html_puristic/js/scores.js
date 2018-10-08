@@ -130,7 +130,7 @@ function subTotals(last_round) {
         for (pp = 0; pp < tmp_pilot_points.length; pp+=1){
             tot += parseFloat(tmp_pilot_points[pp].points);
         }
-        sub_totals[i].total = parseFloat(tot - pilot_penalties);
+        sub_totals[i].total = parseFloat(tot);
         sub_totals[i].penalties = pilot_penalties;
     }
 
