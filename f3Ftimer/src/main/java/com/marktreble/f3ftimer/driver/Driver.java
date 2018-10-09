@@ -28,7 +28,6 @@ import com.marktreble.f3ftimer.data.race.Race;
 import com.marktreble.f3ftimer.data.race.RaceData;
 import com.marktreble.f3ftimer.data.racepilot.RacePilotData;
 import com.marktreble.f3ftimer.data.results.Results;
-import com.marktreble.f3ftimer.filesystem.SpreadsheetExport;
 import com.marktreble.f3ftimer.languages.Languages;
 import com.marktreble.f3ftimer.media.TTS;
 
@@ -676,7 +675,7 @@ public class Driver implements TTS.onInitListenerProxy {
 
 			mHandler.postDelayed(new Runnable() {
 				public void run() {
-                
+     
 					speak(leg, TextToSpeech.QUEUE_ADD);
 				}
 			}, SPEECH_DELAY_TIME);
@@ -770,10 +769,14 @@ public class Driver implements TTS.onInitListenerProxy {
 				Log.d(TAG, "TIME SPOKEN");
 
 				// Update the .txt file
-				new SpreadsheetExport().writeResultsFile(mContext, mRace);
-				Log.d(TAG, "EXPORT FILE WRITTEN");
+				if (mContext instanceof TcpIoService) {
+					/* no need for writing the results file */
+				} else {
+					//new SpreadsheetExport().writeResultsFile(mContext, mRace);
+					//Log.d(TAG, "EXPORT FILE WRITTEN");
+				}
 				SystemClock.sleep(1000);
-
+				
 				// Post to the Race Results Display Service
 				Results r = new Results();
 				r.getOrderedRoundInProgress(mContext, mRid);

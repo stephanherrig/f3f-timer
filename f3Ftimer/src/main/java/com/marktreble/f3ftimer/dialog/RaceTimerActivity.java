@@ -213,7 +213,11 @@ public class RaceTimerActivity extends FragmentActivity {
 
 	public void resetLiveStats() {
 		Intent i = new Intent("com.marktreble.f3ftimer.onLiveUpdate");
-		i.putExtra("com.marktreble.f3ftimer.value.state", 1);
+        i.putExtra("com.marktreble.f3ftimer.value.state", 1);
+		i.putExtra("com.marktreble.f3ftimer.value.raceName", mRace.name);
+		i.putExtra("com.marktreble.f3ftimer.value.raceStatus", mRace.status);
+		i.putExtra("com.marktreble.f3ftimer.value.raceRound", mRound);
+		i.putExtra("com.marktreble.f3ftimer.value.currentPilot", mPilot.firstname + " " + mPilot.lastname);
 		i.putExtra("com.marktreble.f3ftimer.value.currentPilotId", mPilot.id);
 		i.putExtra("com.marktreble.f3ftimer.value.workingTime", 0.0f);
 		i.putExtra("com.marktreble.f3ftimer.value.climbOutTime", 0.0f);
