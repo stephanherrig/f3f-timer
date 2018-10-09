@@ -1018,7 +1018,8 @@ public class RaceActivity extends ListActivity {
                 if ((p.time==0 || Float.isNaN(p.time)) && p.flown) // Avoid division by 0
                     p.points = 0;
 
-                p.points -= p.penalty * 100;
+                /* don't subtract the penalty points here, but from the overall result */
+                //p.points -= p.penalty * 100;
 
                 if ((p.time==0 || Float.isNaN(p.time)) && p.status == Pilot.STATUS_RETIRED) // Avoid division by 0
                     p.points = 0;
