@@ -298,11 +298,12 @@ public class RaceResultsService extends Service {
     	        header += "Content-Length: "+len+"\n";
 				String now = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis())).replaceFirst("\\x2B\\d\\d:\\d\\d","");
 				header += "Date: "+now+"\n";
-				String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+30000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
-				header += "Expires: "+expiredate+"\n";
-				header += "Cache-Control: max-age=30\n";
-				header += "Cache-Control: no-cache\n";
-				header += "Cache-Control: no-store\n";
+				//String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+30000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
+				//header += "Expires: "+expiredate+"\n";
+				header += "Last-Modified: "+now+"\n";
+				header += "Cache-Control: public, max-age=1\n";
+				//header += "Cache-Control: no-cache\n";
+				//header += "Cache-Control: no-store\n";
 				header += "\r\n";
 
     	        byte[] headerBytes = header.getBytes();
@@ -660,11 +661,12 @@ public class RaceResultsService extends Service {
             header += "Content-Length: "+data.length()+"\n";
             String now = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis())).replaceFirst("\\x2B\\d\\d:\\d\\d","");
             header += "Date: "+now+"\n";
-            String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+1000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
-            header += "Expires: "+expiredate+"\n";
-            header += "Cache-Control: max-age=1\n";
-			header += "Cache-Control: no-cache\n";
-			header += "Cache-Control: no-store\n";
+            //String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+1000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
+            //header += "Expires: "+expiredate+"\n";
+			header += "Last-Modified: "+now+"\n";
+			header += "Cache-Control: public, max-age=1\n";
+			//header += "Cache-Control: no-cache\n";
+			//header += "Cache-Control: no-store\n";
             header += "\r\n";
 
             return (header + data).getBytes();
@@ -780,11 +782,12 @@ public class RaceResultsService extends Service {
             header += "Content-Length: "+data.length()+"\n";
             String now = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis())).replaceFirst("\\x2B\\d\\d:\\d\\d","");
             header += "Date: "+now+"\n";
-            String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+30000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
-            header += "Expires: "+expiredate+"\n";
-            header += "Cache-Control: max-age=30\n";
-			header += "Cache-Control: no-cache\n";
-			header += "Cache-Control: no-store\n";
+            //String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+30000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
+            //header += "Expires: "+expiredate+"\n";
+			header += "Last-Modified: "+now+"\n";
+			header += "Cache-Control: public, max-age=1\n";
+			//header += "Cache-Control: no-cache\n";
+			//header += "Cache-Control: no-store\n";
             header += "\r\n";
 
             return (header + data).getBytes();

@@ -431,12 +431,12 @@ public class RaceActivity extends ListActivity {
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         /* Don't destroy the servers when back is pressed.
 		   Stop them when a race is selected, so that results can still be viewed in the meantime, minimizing downtime. */
-        //if (RaceResultsService.stop(this)){
-            boolean pref_wifi_hotspot = sharedPref.getBoolean("pref_wifi_hotspot", false);
-            if (pref_wifi_hotspot && Wifi.canEnableWifiHotspot(this) && !mInputSource.equals(getString(R.string.TCP_IO))){
-				Wifi.disableWifiHotspot(this, mWifiSavedState);
-			}
-       	//}
+        RaceResultsService.stop(this);
+
+        boolean pref_wifi_hotspot = sharedPref.getBoolean("pref_wifi_hotspot", false);
+        if (pref_wifi_hotspot && Wifi.canEnableWifiHotspot(this) && !mInputSource.equals(getString(R.string.TCP_IO))){
+            Wifi.disableWifiHotspot(this, mWifiSavedState);
+        }
 
         RaceResultsDisplayService.stop(this);
 

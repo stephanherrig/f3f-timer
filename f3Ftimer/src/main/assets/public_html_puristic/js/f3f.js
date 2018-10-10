@@ -50,9 +50,11 @@ function getUpdate(){
 
     var requesturl;
     if (curr_view !== undefined && curr_view.className === 'liveinfo list') {
-        requesturl = "api/getRaceLiveData.jsp?last_request="+lastTime.toString();
+        requesturl = "api/getRaceLiveData.jsp";
+        //?last_request="+lastTime.toString();
     } else {
-        requesturl = "api/getRaceData.jsp?last_request="+lastTime.toString();
+        requesturl = "api/getRaceData.jsp";
+        //?last_request="+lastTime.toString();
     }
 	try {
 	    xhr = new XMLHttpRequest();
