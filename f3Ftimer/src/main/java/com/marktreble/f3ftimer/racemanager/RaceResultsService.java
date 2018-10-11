@@ -301,7 +301,7 @@ public class RaceResultsService extends Service {
 				//String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+30000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
 				//header += "Expires: "+expiredate+"\n";
 				header += "Last-Modified: "+now+"\n";
-				header += "Cache-Control: public, max-age=1\n";
+				header += "Cache-Control: public, max-age=60\n";
 				//header += "Cache-Control: no-cache\n";
 				//header += "Cache-Control: no-store\n";
 				header += "\r\n";
@@ -785,7 +785,7 @@ public class RaceResultsService extends Service {
             //String expiredate = HTTP_HEADER_DATE_FORMAT.format(new Date(System.currentTimeMillis()+30000)).replaceFirst("\\x2B\\d\\d:\\d\\d","");
             //header += "Expires: "+expiredate+"\n";
 			header += "Last-Modified: "+now+"\n";
-			header += "Cache-Control: public, max-age=1\n";
+			header += "Cache-Control: public, max-age=30\n";
 			//header += "Cache-Control: no-cache\n";
 			//header += "Cache-Control: no-store\n";
             header += "\r\n";
