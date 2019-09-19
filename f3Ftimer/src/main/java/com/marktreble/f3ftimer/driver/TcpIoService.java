@@ -39,6 +39,7 @@ public class TcpIoService extends Service implements DriverInterface {
 	// Commands from raspberrypi
 	private static final String FT_TURNA = "A";
 	private static final String FT_TURNB = "B";
+	private static final String FT_START_WORKING_TIME = "R";
 	private static final String FT_START = "S";
 	private static final String FT_CANCEL = "C";
 	private static final String FT_CANCEL_ZERO = "Z";
@@ -579,6 +580,14 @@ public class TcpIoService extends Service implements DriverInterface {
 	}
 	
 	// Driver Interface implementations
+	public void sendWorkingTimeStarted(){
+		timeAlreadyReceived = false;
+		if (sendThread != null && sendThread.isAlive()) {
+			Log.i(TAG, "sendWorkingTimeStarted");
+			sendThread.sendCmd(FT_START_WORKING_TIME + " ");
+		}
+	}
+
 	public void sendLaunch(){
 		timeAlreadyReceived = false;
 		if (sendThread != null && sendThread.isAlive()) {

@@ -506,9 +506,14 @@ public class Driver implements TTS.onInitListenerProxy {
 	
 	public void startWorkingTime(){
 		cancelTimeout();
+		
+		// Send StartWorkingTime command to HID
+		((DriverInterface)mContext).sendWorkingTimeStarted();
+		
+		// Synthesized Call
 		if (mSpeechFXon){
+			mHandler.postDelayed(workingTimeStartedBuzzer, 10);
 			mHandler.postDelayed(announceWorkingTime, 100);
-			mHandler.postDelayed(workingTimeStarted, 3000);
 		}
 	}
 
@@ -516,11 +521,11 @@ public class Driver implements TTS.onInitListenerProxy {
 		mSentFinaliseIndication = true; /* prevent that a pending delayed automatic progression handler sends a broadcast */
 		if (mSpeechFXon) {
 			mHandler.removeCallbacks(announceWorkingTime);
-			mHandler.removeCallbacks(workingTimeStarted);
+			mHandler.removeCallbacks(workingTimeStartedBuzzer);
 		}
 	}
 	
-	Runnable workingTimeStarted = new Runnable(){
+	Runnable workingTimeStartedBuzzer = new Runnable(){
 		@Override
 		public void run() {
 			if (mSoundFXon) {
@@ -534,7 +539,7 @@ public class Driver implements TTS.onInitListenerProxy {
 		@Override
 		public void run() {
 			Resources r = Languages.useLanguage(mContext, mPilotLang);
-			String lang = r.getString(R.string.start_working_time);
+			String lang = r.getString(R.string.working_time_started);
 			Languages.useLanguage(mContext, mDefaultLang);
 			speak(lang, TextToSpeech.QUEUE_ADD);
 		}

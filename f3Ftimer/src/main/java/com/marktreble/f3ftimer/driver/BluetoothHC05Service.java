@@ -8,12 +8,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelUuid;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 import com.marktreble.f3ftimer.R;
@@ -24,7 +22,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Set;
 import java.util.UUID;
 
@@ -258,6 +255,8 @@ public class BluetoothHC05Service extends Service implements DriverInterface {
 	public void driverDisconnected(){
 		mDriver.driverDisconnected(ICN_DISCONN);
 	}
+	
+	public void sendWorkingTimeStarted(){}
 
 	public void sendLaunch(){
 		this.sendCmd(TT_LAUNCH);

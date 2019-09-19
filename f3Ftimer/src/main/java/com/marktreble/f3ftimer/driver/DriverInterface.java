@@ -8,6 +8,7 @@ package com.marktreble.f3ftimer.driver;
 public interface DriverInterface {
 	public void driverConnected();
 	public void driverDisconnected();
+	public void sendWorkingTimeStarted();
 	public void sendLaunch();
 	public void sendAbort();
 	public void sendAdditionalBuzzer();

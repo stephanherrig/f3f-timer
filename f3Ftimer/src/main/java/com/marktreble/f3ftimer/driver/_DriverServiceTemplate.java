@@ -51,6 +51,8 @@ public class _DriverServiceTemplate extends Service implements DriverInterface {
 	}
 	public void driverDisconnected(){
 	}
+	public void sendWorkingTimeStarted(){
+	}
 	public void sendLaunch(){
 	}
 

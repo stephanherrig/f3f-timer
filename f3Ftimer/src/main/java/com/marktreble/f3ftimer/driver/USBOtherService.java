@@ -6,14 +6,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-
-import android.hardware.usb.UsbManager;
 import android.os.SystemClock;
 import android.util.Log;
-import android.util.Xml;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
@@ -23,15 +21,11 @@ import com.marktreble.f3ftimer.R;
 import com.marktreble.f3ftimer.racemanager.RaceActivity;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import ioio.lib.api.Uart;
 
 public class USBOtherService extends Service implements DriverInterface {
 		
@@ -454,6 +448,8 @@ public class USBOtherService extends Service implements DriverInterface {
     public void driverDisconnected(){
         mDriver.driverDisconnected(ICN_DISCONN);
     }
+    
+    public void sendWorkingTimeStarted(){}
 
     public void sendLaunch(){
         this.sendCmd(TT_LAUNCH);

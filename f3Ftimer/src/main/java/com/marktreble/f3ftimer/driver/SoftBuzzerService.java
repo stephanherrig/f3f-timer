@@ -237,6 +237,9 @@ public class SoftBuzzerService extends Service implements DriverInterface, Threa
     public void driverDisconnected(){
         mDriver.driverDisconnected(ICN_DISCONN);
     }
+    
+    public void sendWorkingTimeStarted(){
+    }
 
     public void sendLaunch(){
         mTimerStatus = 0;

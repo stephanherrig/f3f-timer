@@ -24,11 +24,11 @@ public class RaceTimerFrag2 extends RaceTimerFrag {
 		
         if (savedInstanceState != null) {
 	    } else {
-			/* first speak working time started, then start the timer */
+			/* first start the timer, then speak working time started */
 			mRaceTimerActivity.mLastSecond = 0;
-	    	mRaceTimerActivity.mStart = System.currentTimeMillis() + 3000;
+	    	mRaceTimerActivity.mStart = System.currentTimeMillis();
 			mRaceTimerActivity.mHandlerEndTime = mRaceTimerActivity.mStart + 10;
-		    mRaceTimerActivity.mHandler.postDelayed(updateClock, 3010);
+		    mRaceTimerActivity.mHandler.postDelayed(updateClock, 10);
 	    }
 
         // Begin the timeout dialog timeout
